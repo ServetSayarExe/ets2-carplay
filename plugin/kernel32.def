@@ -20,3 +20,4 @@ SetFilePointer
 ReadFile
 GetEnvironmentVariableW
 GetFileAttributesW
+CreateProcessW

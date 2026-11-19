@@ -38,8 +38,8 @@ Eklentiyi derlemek (clang + lld):
 
 ```
 clang -target x86_64-pc-windows-msvc -O2 -ffreestanding -fno-builtin -fno-stack-protector -mno-stack-arg-probe -fshort-wchar -c ets2_carplay.c -o ets2_carplay.obj
-for d in kernel32 user32 gdi32 d3d11 shell32; do llvm-dlltool -m i386:x86-64 -d $d.def -l $d.lib; done
-lld-link /dll /noentry /nodefaultlib /machine:x64 /out:ets2_carplay.dll ets2_carplay.obj kernel32.lib user32.lib gdi32.lib d3d11.lib shell32.lib
+for d in kernel32 user32 gdi32 d3d11; do llvm-dlltool -m i386:x86-64 -d $d.def -l $d.lib; done
+lld-link /dll /noentry /nodefaultlib /machine:x64 /out:ets2_carplay.dll ets2_carplay.obj kernel32.lib user32.lib gdi32.lib d3d11.lib.lib
 ```
 
 Derlenmiş DLL ve paketlenmiş mod `app/assets/` içinde durur; kurulum dosyası bunları içerir.

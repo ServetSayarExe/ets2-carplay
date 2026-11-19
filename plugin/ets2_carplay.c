@@ -62,7 +62,6 @@ __declspec(dllimport) BOOL   WINAPI WriteFile(HANDLE, const void*, u32, u32*, vo
 __declspec(dllimport) BOOL   WINAPI ReadFile(HANDLE, void*, u32, u32*, void*);
 __declspec(dllimport) u32    WINAPI GetEnvironmentVariableW(const wchar*, wchar*, u32);
 __declspec(dllimport) u32    WINAPI GetFileAttributesW(const wchar*);
-__declspec(dllimport) void*  WINAPI ShellExecuteW(HWND, const wchar*, const wchar*, const wchar*, const wchar*, i32);
 __declspec(dllimport) u32    WINAPI GetEnvironmentVariableA(const char*, char*, u32);
 __declspec(dllimport) u64    WINAPI GetTickCount64(void);
 __declspec(dllimport) void   WINAPI GetLocalTime(SYSTEMTIME*);
@@ -211,15 +210,27 @@ static int cfg_read(int* dim) {
     return 1;
 }
 
-/* Oyun acilinca uygulamayi arka planda baslat */
+/* Oyun acilinca uygulamayi arka planda baslat.
+   ShellExecute yerine CreateProcess: ShellExecute COM ister, oyun icindeki is parcaciginda takiliyordu. */
+typedef struct { u32 cb; wchar *r, *desk, *title; u32 x, y, xs, ys, xc, yc, fill, flags; u16 show, cbr2; u8* r2; HANDLE in, out, err; } STARTUPINFOW_;
+typedef struct { HANDLE proc, thr; u32 pid, tid; } PROCINFO_;
+__declspec(dllimport) BOOL WINAPI CreateProcessW(const wchar*, wchar*, void*, void*, BOOL, u32, void*, const wchar*, STARTUPINFOW_*, PROCINFO_*);
 static void launch_app(void) {
+    static const wchar title[] = { 'E','T','S','2',' ','C','a','r','P','l','a','y',0 };
+    if (FindWindowW(NULL, title)) return; /* zaten acik */
     wchar p[600]; u32 n = GetEnvironmentVariableW((const wchar*)L"LOCALAPPDATA", p, 400);
     if (!n || n > 400) return;
     const wchar* tail = (const wchar*)L"\\Programs\\ets2-carplay\\ETS2 CarPlay.exe";
     int i = 0; while (tail[i]) { p[n + i] = tail[i]; i++; } p[n + i] = 0;
     if (GetFileAttributesW(p) == 0xFFFFFFFFu) { lg("uygulama kurulu degil, otomatik baslatilamadi"); return; }
-    ShellExecuteW(NULL, (const wchar*)L"open", p, (const wchar*)L"--oyundan", NULL, 4 /*SW_SHOWNOACTIVATE*/);
-    lg("uygulama otomatik baslatildi");
+    wchar cmd[700]; int k = 0; cmd[k++] = '"'; for (i = 0; p[i]; i++) cmd[k++] = p[i]; cmd[k++] = '"';
+    const wchar* arg = (const wchar*)L" --oyundan"; for (i = 0; arg[i]; i++) cmd[k++] = arg[i]; cmd[k] = 0;
+    STARTUPINFOW_ si; memset(&si, 0, sizeof si); si.cb = sizeof si; si.flags = 1 /*USESHOWWINDOW*/; si.show = 4 /*SHOWNOACTIVATE*/;
+    PROCINFO_ pi; memset(&pi, 0, sizeof pi);
+    if (CreateProcessW(p, cmd, NULL, NULL, 0, 0x00000008 /*DETACHED_PROCESS*/ | 0x00000200 /*NEW_PROCESS_GROUP*/ | 0x01000000 /*BREAKAWAY_FROM_JOB*/, NULL, NULL, &si, &pi)
+        || CreateProcessW(p, cmd, NULL, NULL, 0, 0x00000008 | 0x00000200, NULL, NULL, &si, &pi)) {
+        CloseHandle(pi.thr); CloseHandle(pi.proc); lg("uygulama otomatik baslatildi");
+    } else lg("uygulama baslatilamadi (CreateProcess)");
 }
 
 static int s_len(const char* s) { int n = 0; while (s[n]) n++; return n; }
@@ -473,6 +484,7 @@ __declspec(dllexport) i32 scs_telemetry_init(u32 version, const void* params) {
     log_open();
     cfg_init();
     lg("ETS2 CarPlay eklentisi basliyor (by servetsayarexe)");
+    launch_app(); /* oyunla birlikte hemen ac */
     if (g_scslog) g_scslog(0, "[ETS2 CarPlay] eklenti basliyor");
 
     InitializeCriticalSection(&g_cs);
