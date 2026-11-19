@@ -78,6 +78,31 @@ app.whenReady().then(() => {
   createWindow();
   setupUpdater();
   watchGame();
+  setupAdblock(part);
+});
+
+// Reklam engelleyici: uBlock Origin / EasyList listeleriyle calisan Ghostery motoru.
+// Listeler haftada bir yenilenir, acik/kapali tercihi ayarlar.json'da durur.
+const fsp = require('fs').promises;
+const prefFile = () => path.join(app.getPath('userData'), 'ayarlar.json');
+function readPrefs() { try { return JSON.parse(require('fs').readFileSync(prefFile(), 'utf8')); } catch (e) { return {}; } }
+function writePrefs(p) { try { require('fs').writeFileSync(prefFile(), JSON.stringify(p)); } catch (e) {} }
+let blocker = null, adSession = null, adOn = readPrefs().adblock !== false;
+async function setupAdblock(part) {
+  adSession = part;
+  try {
+    const { ElectronBlocker } = require('@ghostery/adblocker-electron');
+    const cache = path.join(app.getPath('userData'), 'reklam-listeleri.bin');
+    try { const st = await fsp.stat(cache); if (Date.now() - st.mtimeMs > 7 * 864e5) await fsp.unlink(cache); } catch (e) {}
+    blocker = await ElectronBlocker.fromPrebuiltAdsAndTracking(fetch, { path: cache, read: fsp.readFile, write: fsp.writeFile });
+    if (adOn) blocker.enableBlockingInSession(part);
+  } catch (e) { blocker = null; console.error('reklam engelleyici baslatilamadi', e); }
+}
+ipcMain.handle('adblock-get', () => ({ on: adOn, ready: !!blocker }));
+ipcMain.on('adblock-set', (e, on) => {
+  adOn = !!on; const p = readPrefs(); p.adblock = adOn; writePrefs(p);
+  if (!blocker || !adSession) return;
+  try { if (adOn) { if (!blocker.isBlockingEnabled(adSession)) blocker.enableBlockingInSession(adSession); } else if (blocker.isBlockingEnabled(adSession)) blocker.disableBlockingInSession(adSession); } catch (err) {}
 });
 
 // Oyun kapaninca uygulama da kapansin (oyun bir kez calisirken goruldukten sonra)

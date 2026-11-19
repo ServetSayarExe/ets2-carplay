@@ -150,6 +150,9 @@
   .scr{width:300px;height:169px;border-radius:12px;background:#000;border:2px solid #2c3d5c;position:relative;overflow:hidden}
   .scr .img{position:absolute;background:linear-gradient(135deg,#2a5d9a,#7c3a6e);border-radius:2px;transition:inset .1s}
   .scr .img::after{content:"";position:absolute;left:50%;top:50%;width:26px;height:26px;margin:-13px 0 0 -13px;border-radius:13px;background:rgba(255,255,255,.3)}
+  .tog{height:44px;padding:0 20px;font-size:18px;justify-self:end}
+  .tog[aria-pressed="true"]{background:var(--amber);color:var(--amber-ink)}
+  .adnote{font-size:16px;color:var(--muted)}
   .sfoot{display:flex;justify-content:flex-start}
   #bSet{margin-top:6px}
 
@@ -263,6 +266,7 @@
         <div class="srow"><span>Beyazları yumuşat</span><input type="range" id="sW" min="0" max="100" step="5"><b id="vW"></b></div>
         <div class="srow"><span>Akıcılık</span><input type="range" id="sF" min="10" max="60" step="5"><b id="vF"></b></div>
         <p class="help" style="margin-top:0">Beyazlar gözünü alıyorsa önce yumuşatmayı artır, sonra parlaklığı kıs. Akıcılığı düşürmek oyunda biraz FPS kazandırır.</p>
+        <div class="srow" style="grid-template-columns:190px 1fr auto"><span>Reklam engelleyici</span><span class="adnote" id="adNote">uBlock Origin listeleri</span><button class="pill tog" id="adTog" aria-pressed="true">Açık</button></div>
       </div>
       <div class="sgroup">
         <h2>Ekrana sığdır</h2>
@@ -515,6 +519,9 @@ function syncUI(){ for (const k in S){ $(S[k][0]).value = cfg[k]; paint(k); } pr
 for (const k in S) $(S[k][0]).addEventListener('input', e => { cfg[k] = parseInt(e.target.value,10); paint(k); preview(); pushCfg(); });
 $('sReset').onclick = () => { cfg = Object.assign({}, DEF); syncUI(); pushCfg(); };
 $('bSet').onclick = showSettings; $('tSet').onclick = showSettings;
+function adPaint(on){ $('adTog').setAttribute('aria-pressed', on?'true':'false'); $('adTog').textContent = on?'Açık':'Kapalı'; }
+ipcRenderer.invoke('adblock-get').then(r => { adPaint(r.on); if (!r.ready) $('adNote').textContent = 'Listeler indiriliyor'; }).catch(()=>{});
+$('adTog').onclick = () => { const on = $('adTog').getAttribute('aria-pressed') !== 'true'; adPaint(on); ipcRenderer.send('adblock-set', on); };
 $('uName').value = load('cp_name')||'';
 $('uName').addEventListener('input', e => { store('cp_name', e.target.value.trim()); tick(); });
 $('uName').addEventListener('keydown', e => { if(e.key==='Enter') e.target.blur(); });
