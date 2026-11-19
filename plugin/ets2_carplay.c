@@ -165,7 +165,8 @@ static void build_lut(u32 dim, i32 white) {
     i32 slope = 1000 - white * 7;              /* binde: 1000 .. 300 */
     for (i32 x = 0; x < 256; x++) {
         i32 y = x <= knee ? x : knee + (x - knee) * slope / 1000;
-        g_lut[x] = (u8)(((u32)y * dim) >> 8);
+        u32 o = ((u32)y * dim) >> 8;
+        g_lut[x] = (u8)(o > 255 ? 255 : o);
     }
     g_lutDim = dim; g_lutWhite = (u32)white;
 }
@@ -203,7 +204,7 @@ static int cfg_read(int* dim) {
         while (i < r && b[i] != '\n') i++;
         i++;
     }
-    if (vals[0] >= 0) { int v = vals[0]; if (v < 5) v = 5; if (v > 100) v = 100; *dim = v; }
+    if (vals[0] >= 0) { int v = vals[0]; if (v < 5) v = 5; if (v > 200) v = 200; *dim = v; }
     for (int k = 1; k < 5; k++) if (vals[k] >= 0) { int v = vals[k]; if (v > 30) v = 30; g_inset[k - 1] = v; }
     if (vals[5] >= 0) g_white = vals[5] > 100 ? 100 : vals[5];
     if (vals[6] >= 0) g_fps = vals[6] < 10 ? 10 : (vals[6] > 60 ? 60 : vals[6]);
