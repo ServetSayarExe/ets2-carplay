@@ -505,10 +505,11 @@ updateNav();
 showMap();
 
 /* kamyon ekrani ayarlari -> Belgeler\Euro Truck Simulator 2\ets2_carplay.cfg (eklenti saniyede bir okur) */
-const DEF = { dim:100, w:85, fps:60, l:2, t:2, r:0, b:4 };
+const DEF = { dim:55, w:85, fps:60, l:2, t:2, r:0, b:4 };
 let cfg = Object.assign({}, DEF);
 try { const j = JSON.parse(load('cp_screen')||'null'); if (j) Object.assign(cfg, j); } catch(e){}
 if (!load('cp_fps60')) { cfg.fps = 60; store('cp_fps60','1'); } /* 3.0: 60 fps varsayilan */
+if (!load('cp_dim2')) { cfg.dim = Math.max(5, Math.round(cfg.dim * 0.55 / 5) * 5); store('cp_dim2','1'); } /* 3.1.4: mod artik %55 karartmiyor, ayni gorunum icin parlakligi cevir */
 const S = { dim:['sDim','vDim'], w:['sW','vW'], fps:['sF','vF'], l:['sL','vL'], t:['sT','vT'], r:['sR','vR'], b:['sB','vB'] };
 const unit = k => k==='fps' ? ' fps' : '%';
 function pushCfg(){ store('cp_screen', JSON.stringify(cfg)); ipcRenderer.send('screencfg', cfg); }

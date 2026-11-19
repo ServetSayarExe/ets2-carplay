@@ -160,7 +160,7 @@ ipcMain.on('screencfg', (e, c) => {
     const n = (v, lo, hi, d) => { v = parseInt(v, 10); return isNaN(v) ? d : Math.max(lo, Math.min(hi, v)); };
     const dir = path.join(app.getPath('documents'), 'Euro Truck Simulator 2');
     require('fs').mkdirSync(dir, { recursive: true });
-    const txt = `parlaklik=${n(c.dim,5,200,100)}\nbeyaz=${n(c.w,0,100,85)}\nfps=${n(c.fps,10,60,60)}\nsol=${n(c.l,0,25,2)}\nust=${n(c.t,0,25,2)}\nsag=${n(c.r,0,25,0)}\nalt=${n(c.b,0,25,4)}\n`;
+    const txt = `parlaklik=${n(c.dim,5,200,55)}\nbeyaz=${n(c.w,0,100,85)}\nfps=${n(c.fps,10,60,60)}\nsol=${n(c.l,0,25,2)}\nust=${n(c.t,0,25,2)}\nsag=${n(c.r,0,25,0)}\nalt=${n(c.b,0,25,4)}\n`;
     require('fs').writeFileSync(path.join(dir, 'ets2_carplay.cfg'), txt);
   } catch (x) {}
 });

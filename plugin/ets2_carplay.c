@@ -154,7 +154,7 @@ static volatile u32   g_seq, g_uploaded;
 static volatile i32   g_run;
 static HANDLE         g_thread;
 static volatile i32   g_presentSeen, g_texFound;
-static u32            g_dim = 256; /* varsayilan %100 */
+static u32            g_dim = 141; /* varsayilan %55 (mod artik karartmiyor) */
 static u8             g_lut[256];
 static u32            g_lutDim = 0, g_lutWhite = 999;
 static volatile i32   g_white = 85;  /* beyazlari yumusat 0..100 */

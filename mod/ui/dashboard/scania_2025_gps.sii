@@ -277,7 +277,7 @@ ui::text_common : _nameless.1aeb.89c0 {
 }
 
 ui::text : _nameless._.cp_strm1 {
- text: "<color value=FF8C8C8C><img src=/material/ui/dashboard/carplay/stream.mat xscale=stretch yscale=stretch left=0 right=1 top=0 bottom=1>"
+ text: "<color value=FFFFFFFF><img src=/material/ui/dashboard/carplay/stream.mat xscale=stretch yscale=stretch left=0 right=1 top=0 bottom=1>"
  coords_l: -40
  coords_r: 1480
  coords_t: 850
@@ -351,7 +351,7 @@ ui::text : _nameless._.cp_map2 {
 }
 
 ui::text : _nameless._.cp_strm2 {
- text: "<color value=FF8C8C8C><img src=/material/ui/dashboard/carplay/stream.mat xscale=stretch yscale=stretch left=0 right=1 top=0 bottom=1>"
+ text: "<color value=FFFFFFFF><img src=/material/ui/dashboard/carplay/stream.mat xscale=stretch yscale=stretch left=0 right=1 top=0 bottom=1>"
  coords_l: -40
  coords_r: 1480
  coords_t: 850
