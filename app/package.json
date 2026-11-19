@@ -1,0 +1,69 @@
+{
+  "name": "ets2-carplay",
+  "productName": "ETS2 CarPlay",
+  "version": "2.5.0",
+  "description": "ETS2 Scania Smart Dash icin CarPlay tarzi ekran",
+  "main": "main.js",
+  "author": "servetsayarexe",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --win nsis"
+  },
+  "devDependencies": {
+    "electron": "39.8.10",
+    "electron-builder": "^26.0.0"
+  },
+  "build": {
+    "appId": "com.servetsayarexe.ets2carplay",
+    "productName": "ETS2 CarPlay",
+    "electronVersion": "39.8.10",
+    "electronDist": "node_modules/electron/dist",
+    "files": [
+      "main.js",
+      "setup.js",
+      "index.html",
+      "assets/icon.png"
+    ],
+    "extraResources": [
+      {
+        "from": "assets/CarPlay_Scania_SmartDash.scs",
+        "to": "CarPlay_Scania_SmartDash.scs"
+      },
+      {
+        "from": "assets/ets2_carplay.dll",
+        "to": "ets2_carplay.dll"
+      }
+    ],
+    "directories": {
+      "output": "dist-installer"
+    },
+    "win": {
+      "target": "nsis",
+      "icon": "assets/icon.ico",
+      "artifactName": "ETS2-CarPlay-Kurulum.exe",
+      "signAndEditExecutable": true
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "ETS2 CarPlay",
+      "runAfterFinish": true,
+      "installerIcon": "assets/icon.ico",
+      "uninstallerIcon": "assets/icon.ico"
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "ServetSayarExe",
+        "repo": "ets2-carplay",
+        "releaseType": "release"
+      }
+    ]
+  },
+  "dependencies": {
+    "electron-updater": "^6.3.9"
+  },
+  "repository": "https://github.com/ServetSayarExe/ets2-carplay"
+}

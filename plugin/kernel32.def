@@ -1,0 +1,22 @@
+LIBRARY kernel32.dll
+EXPORTS
+CreateThread
+Sleep
+InitializeCriticalSection
+EnterCriticalSection
+LeaveCriticalSection
+DeleteCriticalSection
+VirtualProtect
+VirtualAlloc
+VirtualFree
+WaitForSingleObject
+CloseHandle
+CreateFileA
+WriteFile
+GetEnvironmentVariableA
+GetTickCount64
+GetLocalTime
+SetFilePointer
+ReadFile
+GetEnvironmentVariableW
+GetFileAttributesW

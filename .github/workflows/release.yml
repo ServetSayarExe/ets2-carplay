@@ -1,0 +1,29 @@
+# Yeni sürüm: app/package.json'daki "version"ı artır, "v2.5.1" gibi bir etiket (tag) gönder
+# ya da Actions sekmesinden bu iş akışını elle çalıştır. Kurulum dosyası otomatik derlenip yayınlanır,
+# kullanıcıların uygulaması kendini günceller.
+name: Sürüm derle ve yayınla
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm install --no-audit --no-fund
+      - run: npx electron-builder --win --publish always
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'

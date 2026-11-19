@@ -1,0 +1,10 @@
+LIBRARY gdi32.dll
+EXPORTS
+CreateCompatibleDC
+CreateDIBSection
+SelectObject
+DeleteObject
+DeleteDC
+StretchBlt
+SetStretchBltMode
+GdiFlush

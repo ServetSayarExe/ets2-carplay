@@ -1,0 +1,137 @@
+const { app, BrowserWindow, session, ipcMain, shell, nativeTheme } = require('electron');
+const { runSetup } = require('./setup');
+const path = require('path');
+
+app.setName('ETS2 CarPlay');
+// Oyun penceresinin arkasinda kalinca da cizmeye devam et
+app.commandLine.appendSwitch('disable-features', 'CalculateNativeWinOcclusion');
+app.commandLine.appendSwitch('disable-renderer-backgrounding');
+app.commandLine.appendSwitch('disable-background-timer-throttling');
+app.commandLine.appendSwitch('disable-backgrounding-occluded-windows');
+app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required');
+// Renkler birebir kalsin: oyun eklentisi saf macentayi (FF00FF) seffaf yapar
+app.commandLine.appendSwitch('force-color-profile', 'srgb');
+
+let win;
+const fromGame = process.argv.includes('--oyundan');
+let parkedFrom = null;
+function park() {
+  if (!win || parkedFrom) return;
+  parkedFrom = win.getPosition();
+  win.setPosition(-5000, 0);
+}
+function unpark() {
+  if (!win || !parkedFrom) return;
+  win.setPosition(parkedFrom[0], parkedFrom[1]);
+  parkedFrom = null;
+}
+function chromeUA() {
+  return session.defaultSession.getUserAgent()
+    .replace(/\s?Electron\/\S+/i, '')
+    .replace(/\s?ets2-carplay\/\S+/i, '');
+}
+
+function createWindow() {
+  win = new BrowserWindow({
+    show: !fromGame,
+    width: 1440, height: 810, useContentSize: true,
+    resizable: false, maximizable: false, minimizable: false, fullscreenable: false,
+    frame: false, backgroundColor: '#000000',
+    title: 'ETS2 CarPlay',
+    icon: path.join(__dirname, 'assets', 'icon.png'),
+    webPreferences: {
+      webviewTag: true,
+      backgroundThrottling: false,
+      contextIsolation: false,
+      nodeIntegration: true
+    }
+  });
+  // Pencere basligi hep ayni kalsin (eklenti pencereyi kaybetmesin)
+  win.on('page-title-updated', e => e.preventDefault());
+  win.setTitle('ETS2 CarPlay');
+  win.loadFile('index.html');
+  win.webContents.on('did-finish-load', () => { if (updReady) win.webContents.send('update', { ready: true, version: updReady }); });
+  if (fromGame) {
+    win.once('ready-to-show', () => { park(); win.showInactive(); });
+  }
+
+  // Kucultulen pencere goruntu vermez (eklenti "zero client area" der).
+  // Bu yuzden kucultmek yerine pencereyi ekranin disina park ediyoruz.
+  win.on('minimize', () => { park(); win.showInactive(); });
+  win.on('focus', () => unpark());
+
+  // Farenin geri / ileri tuslari
+  win.on('app-command', (e, cmd) => {
+    if (cmd === 'browser-backward') win.webContents.send('nav', 'back');
+    if (cmd === 'browser-forward') win.webContents.send('nav', 'forward');
+  });
+}
+
+app.whenReady().then(() => {
+  // Siteler koyu temada acilsin (YouTube, Google...) -> kamyon ekraninda beyaz alan parlamasin
+  nativeTheme.themeSource = 'dark';
+  const ua = chromeUA();
+  app.userAgentFallback = ua;
+  const part = session.fromPartition('persist:carplay');
+  part.setUserAgent(ua);
+  part.setPermissionRequestHandler((wc, perm, cb) => cb(true));
+  createWindow();
+  setupUpdater();
+});
+
+// Otomatik guncelleme: GitHub'daki yeni surumu arka planda indirir, ana ekranda "Guncelle" cikar.
+let updater = null, updReady = null;
+function setupUpdater() {
+  if (!app.isPackaged) return;
+  try { updater = require('electron-updater').autoUpdater; } catch (e) { return; }
+  updater.autoDownload = true;
+  updater.autoInstallOnAppQuit = true;
+  updater.on('update-downloaded', (i) => {
+    updReady = i.version;
+    if (win) win.webContents.send('update', { ready: true, version: i.version });
+  });
+  updater.on('error', () => {});
+  const check = () => { if (!updReady) updater.checkForUpdates().catch(() => {}); };
+  setTimeout(check, 8000);
+  setInterval(check, 3 * 60 * 60 * 1000);
+}
+ipcMain.on('update-install', () => { if (updater && updReady) setImmediate(() => updater.quitAndInstall(true, true)); });
+
+// Webview icindeki yeni pencere acma isteklerini ayni ekranda ac
+app.on('web-contents-created', (e, contents) => {
+  if (contents.getType() === 'webview') {
+    contents.setWindowOpenHandler(({ url }) => { contents.loadURL(url); return { action: 'deny' }; });
+    contents.on('before-input-event', (ev, input) => {
+      if (input.type !== 'keyDown') return;
+      if (input.alt && input.key === 'ArrowLeft') { win.webContents.send('nav', 'back'); ev.preventDefault(); }
+      if (input.alt && input.key === 'ArrowRight') { win.webContents.send('nav', 'forward'); ev.preventDefault(); }
+      if (input.alt && input.key === 'Home') { win.webContents.send('nav', 'home'); ev.preventDefault(); }
+      if (input.control && input.key.toLowerCase() === 'l') { win.webContents.send('nav', 'url'); ev.preventDefault(); }
+    });
+  }
+});
+
+ipcMain.on('win', (e, cmd) => {
+  if (!win) return;
+  if (cmd === 'min') { park(); win.blur(); }
+  if (cmd === 'close') win.close();
+});
+
+ipcMain.handle('setup', () => { try { return runSetup(app); } catch (e) { return { error: e.message }; } });
+// Kamyon ekrani ayarlari: eklenti bu dosyayi saniyede bir okur
+ipcMain.on('screencfg', (e, c) => {
+  try {
+    const n = (v, lo, hi, d) => { v = parseInt(v, 10); return isNaN(v) ? d : Math.max(lo, Math.min(hi, v)); };
+    const dir = path.join(app.getPath('documents'), 'Euro Truck Simulator 2');
+    require('fs').mkdirSync(dir, { recursive: true });
+    const txt = `parlaklik=${n(c.dim,5,100,100)}\nbeyaz=${n(c.w,0,100,85)}\nfps=${n(c.fps,10,30,30)}\nsol=${n(c.l,0,25,1)}\nust=${n(c.t,0,25,1)}\nsag=${n(c.r,0,25,1)}\nalt=${n(c.b,0,25,1)}\n`;
+    require('fs').writeFileSync(path.join(dir, 'ets2_carplay.cfg'), txt);
+  } catch (x) {}
+});
+ipcMain.on('open-dir', (e, dir) => { if (dir) { try { require('fs').mkdirSync(dir, { recursive: true }); } catch (x) {} shell.openPath(dir); } });
+
+// Tek kopya calissin
+if (!app.requestSingleInstanceLock()) app.quit();
+else app.on('second-instance', () => { if (win) { if (win.isMinimized()) win.restore(); win.focus(); } });
+
+app.on('window-all-closed', () => app.quit());

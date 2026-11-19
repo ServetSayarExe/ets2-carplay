@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<title>ETS2 CarPlay</title>
+<style>
+  /* Gece kabini: koyu lacivert zemin, gosterge amberi tek vurgu, Bahnschrift (DIN) yazi.
+     Kamyon ekraninda parlama olmasin diye buyuk beyaz yuzey yok, yazi saf beyaz degil. */
+  :root{
+    --bg:#08101c; --panel:#101a2a; --panel2:#16233a; --line:#1f2d45;
+    --text:#e3e8ef; --muted:#8492a8; --faint:#5a6880;
+    --amber:#f0a43a; --amber-ink:#1a1206; --ok:#45c486; --warn:#e8833a;
+    --yt:#ff5a50; --ytm:#ff6b94; --g:#7aaeff; --kick:#53fc18; --news:#5fd0c0; --radio:#86d886; --last:#b7c2d3;
+    --r-lg:28px; --r-md:20px; --r-sm:14px;
+    --font:"Bahnschrift","DIN Alternate","Segoe UI",system-ui,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{width:1440px;height:810px;overflow:hidden;background:var(--bg);color:var(--text);
+    font-family:var(--font);user-select:none;-webkit-font-smoothing:antialiased}
+  button{font-family:inherit;color:inherit;border:0;background:none;cursor:pointer;text-align:left}
+  button:focus-visible,input:focus-visible{outline:3px solid var(--amber);outline-offset:3px}
+  svg{display:block;flex:none}
+  @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+
+  /* ---------- sol ray ---------- */
+  .rail{position:absolute;left:0;top:0;width:120px;height:810px;background:#0b1422;
+    display:flex;flex-direction:column;align-items:center;padding:20px 0 18px;gap:10px;
+    border-right:1px solid var(--line);z-index:5}
+  .clock{font-size:36px;font-weight:600;line-height:1;font-variant-numeric:tabular-nums;-webkit-app-region:drag}
+  .date{font-size:15px;color:var(--muted);margin:2px 0 10px;-webkit-app-region:drag}
+  .nav,.rapp{position:relative;width:88px;height:64px;border-radius:var(--r-sm);background:var(--panel);
+    display:flex;align-items:center;justify-content:center;color:var(--text);transition:background .12s,transform .08s}
+  .nav:hover,.rapp:hover{background:var(--panel2)}
+  .nav:active,.rapp:active{transform:scale(.95)}
+  .nav[disabled]{color:var(--faint);background:transparent;pointer-events:none}
+  .nav.on,.rapp.on{color:var(--amber);background:var(--panel2)}
+  .nav.on::before,.rapp.on::before{content:"";position:absolute;left:-16px;top:16px;bottom:16px;width:5px;border-radius:0 4px 4px 0;background:var(--amber)}
+  .rapp{height:68px}
+  .sep{width:56px;height:1px;background:var(--line);margin:6px 0}
+  .grow{flex:1}
+  .mini{width:88px;height:88px;border-radius:var(--r-md);background:var(--panel) center/cover no-repeat;position:relative;overflow:hidden;display:none}
+  .mini .pp{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(8,16,28,.45);color:var(--text)}
+
+  /* ---------- icerik ---------- */
+  .stage{position:absolute;left:120px;top:0;width:1320px;height:810px}
+  .view{position:absolute;inset:0;transition:opacity .16s}
+  .hidden{opacity:0;pointer-events:none;visibility:hidden}
+
+  /* ana ekran */
+  #home{padding:30px 32px 32px;display:grid;grid-template-columns:1fr 344px;grid-template-rows:84px 1fr;gap:24px}
+  .top{grid-column:1/3;display:flex;align-items:center;gap:24px}
+  .hello{margin-right:auto}
+  .hello h1{font-size:40px;font-weight:600;line-height:1.05}
+  .hello p{font-size:18px;color:var(--muted);margin-top:6px}
+  .search{width:640px;height:72px;border-radius:36px;background:var(--panel);border:1px solid var(--line);
+    display:flex;align-items:center;padding:0 10px 0 26px;gap:14px;color:var(--muted)}
+  .search:focus-within{border-color:var(--amber)}
+  .search input{flex:1;min-width:0;background:none;border:0;outline:0;color:var(--text);font-size:22px;font-family:inherit}
+  .search input::placeholder{color:var(--faint)}
+  .pill{height:52px;padding:0 24px;border-radius:26px;background:var(--panel2);font-size:19px;font-weight:600;color:var(--text);text-align:center}
+  .pill:hover{background:#1d2c48}
+  .pill.go{background:var(--amber);color:var(--amber-ink)}
+
+  .apps{display:grid;grid-template-columns:repeat(4,1fr);grid-template-rows:1fr 1fr 150px;gap:18px;min-height:0}
+  .app{border-radius:var(--r-md);background:var(--panel);border:1px solid var(--line);padding:22px 22px 20px;
+    display:flex;flex-direction:column;justify-content:space-between;transition:background .12s,transform .08s;min-width:0}
+  .app:hover{background:var(--panel2)} .app:active{transform:scale(.98)}
+  .app .n{font-size:23px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .app .s{font-size:16px;color:var(--muted);margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .app:not(.row) .n{white-space:normal;line-height:1.1}
+  .app.row{flex-direction:row;align-items:center;justify-content:flex-start;gap:16px;padding:18px 20px}
+  .app.row .n{font-size:21px}
+  .app.row>span:last-child{min-width:0}
+  .glyph{flex:none;width:60px;height:60px;border-radius:16px;background:rgba(255,255,255,.04);display:flex;align-items:center;justify-content:center}
+  .yt{color:var(--yt)} .ytm{color:var(--ytm)} .g{color:var(--g)} .kick{color:var(--kick)} .news{color:var(--news)} .radio{color:var(--radio)} .last{color:var(--last)} .set{color:var(--muted)}
+
+  /* harita karosu: ekranin ana isi, tek buyuk oge */
+  .maptile{grid-column:1/3;grid-row:1/3;position:relative;overflow:hidden;border-radius:var(--r-lg);
+    background:linear-gradient(180deg,#0f1b2e 0%,#132440 100%);border:1px solid #27395a;padding:30px 32px;
+    display:flex;flex-direction:column;justify-content:flex-end;transition:transform .08s}
+  .maptile:active{transform:scale(.99)}
+  .maptile:hover .road .dash{stroke:#ffb950}
+  .road{position:absolute;inset:0;width:100%;height:100%}
+  .maptile .n{position:relative;font-size:52px;font-weight:600;line-height:1}
+  .maptile .s{position:relative;font-size:19px;color:var(--muted);margin-top:10px;max-width:300px;line-height:1.35}
+  .maptile .go{position:absolute;top:28px;right:28px;width:64px;height:64px;border-radius:32px;background:var(--amber);color:var(--amber-ink);display:flex;align-items:center;justify-content:center}
+
+  .side{display:flex;flex-direction:column;gap:18px;min-height:0}
+  .card{border-radius:var(--r-lg);background:var(--panel);border:1px solid var(--line);padding:22px}
+  .np{flex:1;display:flex;flex-direction:column;min-height:0}
+  .np .lbl{font-size:16px;color:var(--muted)}
+  .np .art{margin:14px 0 16px;flex:1;min-height:0;border-radius:var(--r-md);background:var(--panel2) center/cover no-repeat;display:flex;align-items:center;justify-content:center;color:var(--faint);cursor:pointer}
+  .np .t{font-size:23px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .np .a{font-size:17px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:4px}
+  .ctr{display:flex;justify-content:space-between;align-items:center;margin-top:16px;padding:0 10px}
+  .ctr button{width:64px;height:64px;border-radius:32px;display:flex;align-items:center;justify-content:center;color:var(--text)}
+  .ctr button:hover{background:var(--panel2)}
+  .ctr .play{width:76px;height:76px;border-radius:38px;background:var(--amber);color:var(--amber-ink)}
+  .ctr .play:hover{background:#ffb950}
+
+  .status{padding:16px 20px;font-size:16px}
+  .st{display:flex;align-items:center;gap:10px;color:#c3ccd8;padding:3px 0;line-height:1.3}
+  .st i{width:10px;height:10px;border-radius:5px;background:var(--faint);flex:none}
+  .st.ok i{background:var(--ok)} .st.bad i{background:var(--warn)}
+  .st.link{cursor:pointer;text-decoration:underline;text-underline-offset:3px}
+  .status .allok{display:none}
+  .status.ready .st{display:none}
+  .status.ready .allok{display:flex}
+  .keys{font-size:14px;color:var(--faint);margin-top:8px;line-height:1.45}
+  .keys b{color:var(--muted);font-weight:600}
+
+  /* harita gorunumu: macenta oyunda seffaf olur, altta oyunun haritasi gorunur */
+  #map{background:#ff00ff}
+  .npf{position:absolute;right:24px;bottom:24px;width:380px;height:100px;border-radius:var(--r-md);background:rgba(11,20,34,.97);
+    border:1px solid var(--line);display:none;align-items:center;gap:14px;padding:12px 14px 12px 12px}
+  .npf .a{width:76px;height:76px;border-radius:14px;background:var(--panel2) center/cover;flex:none}
+  .npf .tx{flex:1;min-width:0}
+  .npf .t{font-size:19px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .npf .s{font-size:15px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
+  .npf button{width:56px;height:56px;border-radius:28px;background:var(--amber);color:var(--amber-ink);display:flex;align-items:center;justify-content:center;flex:none}
+  #dimpx{display:none}
+
+  /* ayarlar */
+  #settings{padding:36px 40px;display:flex;flex-direction:column;justify-content:center;gap:26px}
+  .shead{display:flex;align-items:flex-end;gap:24px}
+  .shead>div{margin-right:auto}
+  .shead h1{font-size:38px;font-weight:600}
+  .namebox{display:flex;align-items:center;gap:14px;font-size:20px}
+  .namebox input{width:300px;height:56px;border-radius:28px;background:var(--panel);border:1px solid var(--line);color:var(--text);font-size:21px;font-family:inherit;padding:0 22px;outline:0}
+  .namebox input:focus{border-color:var(--amber)}
+  .namebox input::placeholder{color:var(--faint)}
+  .upd{display:none;align-items:center;gap:12px;height:52px;padding:0 10px 0 20px;border-radius:26px;background:var(--panel2);border:1px solid #3a4f73;font-size:18px;color:var(--text)}
+  .upd.show{display:flex}
+  .upd button{height:38px;padding:0 18px;border-radius:19px;background:var(--amber);color:var(--amber-ink);font-size:17px;font-weight:600}
+  .addname{color:var(--amber);font-size:18px;text-decoration:underline;text-underline-offset:4px;margin-left:10px}
+  .shead p{font-size:18px;color:var(--muted);margin-top:8px}
+  .sgrid{display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:stretch}
+  .sgroup{border-radius:var(--r-lg);background:var(--panel);border:1px solid var(--line);padding:26px 28px;display:flex;flex-direction:column;gap:20px}
+  .sgroup h2{font-size:24px;font-weight:600}
+  .sgroup .help{font-size:16px;color:var(--muted);line-height:1.45;margin-top:-10px}
+  .srow{display:grid;grid-template-columns:190px 1fr 74px;align-items:center;gap:16px;font-size:20px}
+  .srow b{text-align:right;font-weight:600;font-variant-numeric:tabular-nums}
+  .srow input{-webkit-appearance:none;appearance:none;height:36px;background:transparent;cursor:pointer}
+  .srow input::-webkit-slider-runnable-track{height:8px;border-radius:4px;
+    background:linear-gradient(90deg,var(--amber) 0 var(--p,50%),#243450 var(--p,50%) 100%)}
+  .srow input::-webkit-slider-thumb{-webkit-appearance:none;width:28px;height:28px;margin-top:-10px;border-radius:14px;background:var(--text);border:4px solid var(--bg)}
+  .fit{display:grid;grid-template-columns:300px 1fr;gap:26px;align-items:center}
+  .fit .rows{display:flex;flex-direction:column;gap:12px}
+  .fit .srow{grid-template-columns:96px 1fr 50px;font-size:19px}
+  .scr{width:300px;height:169px;border-radius:12px;background:#000;border:2px solid #2c3d5c;position:relative;overflow:hidden}
+  .scr .img{position:absolute;background:linear-gradient(135deg,#2a5d9a,#7c3a6e);border-radius:2px;transition:inset .1s}
+  .scr .img::after{content:"";position:absolute;left:50%;top:50%;width:26px;height:26px;margin:-13px 0 0 -13px;border-radius:13px;background:rgba(255,255,255,.3)}
+  .sfoot{display:flex;justify-content:flex-start}
+  #bSet{margin-top:6px}
+
+  /* tarayici */
+  #browser{background:#000;display:flex;flex-direction:column}
+  .bbar{height:68px;flex:none;display:flex;align-items:center;gap:10px;padding:8px 12px 8px 14px;background:#0b1422;border-bottom:1px solid var(--line)}
+  .urlbox{flex:1;height:52px;border-radius:26px;background:var(--panel);border:1px solid var(--line);display:flex;align-items:center;padding:0 20px;gap:12px;color:var(--muted)}
+  .urlbox:focus-within{border-color:var(--amber)}
+  .urlbox input{flex:1;background:none;border:0;outline:0;color:var(--text);font-size:19px;font-family:inherit}
+  .spin{width:20px;height:20px;border-radius:50%;border:3px solid #243450;border-top-color:var(--amber);animation:sp .8s linear infinite;display:none}
+  @keyframes sp{to{transform:rotate(360deg)}}
+  .wvs{position:relative;flex:1}
+  webview{position:absolute;inset:0;width:100%;height:100%;background:#000}
+  webview.off{visibility:hidden;pointer-events:none}
+
+  .winbtns{position:absolute;right:12px;bottom:12px;display:flex;gap:6px;z-index:10;opacity:0;transition:opacity .2s}
+  body:hover .winbtns{opacity:.6}
+  .winbtns button{width:32px;height:32px;border-radius:16px;background:var(--panel2);font-size:14px;text-align:center}
+</style>
+</head>
+<body>
+
+<div class="rail">
+  <div class="clock" id="clock">--:--</div>
+  <div class="date" id="date"></div>
+  <button class="nav" id="bHome" title="Ana menü (Alt+Home)" aria-label="Ana menü">
+    <svg width="30" height="30" viewBox="0 0 24 24"><g fill="currentColor"><rect x="3" y="3" width="8" height="8" rx="2.2"/><rect x="13" y="3" width="8" height="8" rx="2.2"/><rect x="3" y="13" width="8" height="8" rx="2.2"/><rect x="13" y="13" width="8" height="8" rx="2.2"/></g></svg>
+  </button>
+  <button class="nav" id="bBack" title="Geri (Alt+←)" aria-label="Geri">
+    <svg width="30" height="30" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7" stroke="currentColor" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  </button>
+  <button class="nav" id="bFwd" title="İleri (Alt+→)" aria-label="İleri">
+    <svg width="30" height="30" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7" stroke="currentColor" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  </button>
+  <button class="nav" id="bReload" title="Yenile" aria-label="Sayfayı yenile">
+    <svg width="28" height="28" viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.34-5.66M20 4v5h-5" stroke="currentColor" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  </button>
+  <div class="sep"></div>
+  <button class="rapp" id="bMap" title="Harita" aria-label="Harita"><svg width="32" height="32" viewBox="0 0 24 24"><path d="M12 2.5a7 7 0 0 0-7 7c0 5 7 12.5 7 12.5s7-7.5 7-12.5a7 7 0 0 0-7-7zm0 9.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5z" fill="currentColor"/></svg></button>
+  <button class="rapp" data-app="youtube" title="YouTube" aria-label="YouTube"><svg class="yt" width="34" height="34" viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="4" fill="currentColor"/><path d="M10 9v6l5-3z" fill="#101a2a"/></svg></button>
+  <button class="rapp" data-app="music" title="YouTube Music" aria-label="YouTube Music"><svg class="ytm" width="32" height="32" viewBox="0 0 24 24"><path d="M9 18a3 3 0 1 1-2-2.83V5l12-2v11a3 3 0 1 1-2-2.83V6.3L9 7.7z" fill="currentColor"/></svg></button>
+  <button class="rapp" data-app="google" title="Google" aria-label="Google"><svg class="g" width="30" height="30" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.3" stroke="currentColor" stroke-width="2.6" fill="none"/><path d="M15.3 15.3 21 21" stroke="currentColor" stroke-width="2.8" stroke-linecap="round"/></svg></button>
+  <div class="grow"></div>
+  <button class="mini" id="mini" title="Çalanı aç" aria-label="Çalanı aç"><div class="pp" id="miniPP"></div></button>
+  <button class="nav" id="bSet" title="Ekran ayarları" aria-label="Ekran ayarları"><svg width="28" height="28" viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h2M10 17h10" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><circle cx="16" cy="7" r="2.6" stroke="currentColor" stroke-width="2.2" fill="none"/><circle cx="8" cy="17" r="2.6" stroke="currentColor" stroke-width="2.2" fill="none"/></svg></button>
+</div>
+
+<div class="stage">
+  <!-- ANA EKRAN -->
+  <div class="view" id="home">
+    <div class="top">
+      <div class="hello"><h1 id="greet">İyi Yolculuklar</h1><p>Ne açalım?<button class="addname" id="addName">Adını ekle</button></p></div>
+      <div class="upd" id="upd"><span id="updT">Yeni sürüm hazır</span><button id="updB">Güncelle</button></div>
+      <div class="search">
+        <svg width="24" height="24" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.3" stroke="currentColor" stroke-width="2.4" fill="none"/><path d="M15.3 15.3 21 21" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></svg>
+        <input id="q" placeholder="Link yapıştır veya ara" spellcheck="false" autocomplete="off" aria-label="Link veya arama">
+        <button class="pill" id="paste">Yapıştır</button>
+        <button class="pill go" id="goBtn">Aç</button>
+      </div>
+    </div>
+
+    <div class="apps">
+      <button class="maptile" id="tMap">
+        <svg class="road" viewBox="0 0 600 420" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+          <path d="M418 0 L240 420 M462 0 L660 420" stroke="#223656" stroke-width="3" fill="none"/>
+          <path class="dash" d="M440 30 L450 420" stroke="#d99436" stroke-width="7" stroke-dasharray="30 28" fill="none" opacity=".55"/>
+        </svg>
+        <span class="go" aria-hidden="true"><svg width="30" height="30" viewBox="0 0 24 24"><path d="M5 19 19 5M9 5h10v10" stroke="currentColor" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+        <div class="n">Harita</div>
+        <div class="s">Oyunun navigasyonuna geç, müzik köşede çalmaya devam eder</div>
+      </button>
+      <button class="app" data-app="youtube"><span class="glyph yt"><svg width="40" height="40" viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="4" fill="currentColor"/><path d="M10 9v6l5-3z" fill="#101a2a"/></svg></span><span><div class="n">YouTube</div><div class="s">Video</div></span></button>
+      <button class="app" data-app="music"><span class="glyph ytm"><svg width="36" height="36" viewBox="0 0 24 24"><path d="M9 18a3 3 0 1 1-2-2.83V5l12-2v11a3 3 0 1 1-2-2.83V6.3L9 7.7z" fill="currentColor"/></svg></span><span><div class="n">YouTube Music</div><div class="s">Müzik</div></span></button>
+      <button class="app" data-app="google"><span class="glyph g"><svg width="34" height="34" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.3" stroke="currentColor" stroke-width="2.6" fill="none"/><path d="M15.3 15.3 21 21" stroke="currentColor" stroke-width="2.8" stroke-linecap="round"/></svg></span><span><div class="n">Google</div><div class="s">Arama</div></span></button>
+      <button class="app" data-url="https://radio.garden"><span class="glyph radio"><svg width="36" height="36" viewBox="0 0 24 24"><circle cx="12" cy="13" r="2.4" fill="currentColor"/><path d="M7.5 17.5a6.4 6.4 0 0 1 0-9M16.5 8.5a6.4 6.4 0 0 1 0 9M4.6 20.4a10.4 10.4 0 0 1 0-14.8M19.4 5.6a10.4 10.4 0 0 1 0 14.8" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/></svg></span><span><div class="n">Radyo</div><div class="s">Dünya radyoları</div></span></button>
+      <button class="app row" data-url="https://kick.com"><span class="glyph kick"><svg width="30" height="30" viewBox="0 0 24 24"><path d="M4 3h5v6h2V6h2V3h5v6h-2v2h-2v2h2v2h2v6h-5v-3h-2v-3H9v6H4z" fill="currentColor"/></svg></span><span><div class="n">Kick</div><div class="s">Canlı yayın</div></span></button>
+      <button class="app row" data-url="https://news.google.com/?hl=tr&gl=TR&ceid=TR:tr"><span class="glyph news"><svg width="30" height="30" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2.5" stroke="currentColor" stroke-width="2.2" fill="none"/><path d="M8 9h8M8 13h8M8 17h5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span><span><div class="n">Haberler</div><div class="s">Gündem</div></span></button>
+      <button class="app row" id="lastApp"><span class="glyph last"><svg width="30" height="30" viewBox="0 0 24 24"><path d="M12 7v5l3 2" stroke="currentColor" stroke-width="2.2" fill="none" stroke-linecap="round"/><circle cx="12" cy="12" r="8.5" stroke="currentColor" stroke-width="2.2" fill="none"/></svg></span><span style="min-width:0"><div class="n">Son link</div><div class="s" id="lastSub">Henüz yok</div></span></button>
+      <button class="app row" id="tSet"><span class="glyph set"><svg width="30" height="30" viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h2M10 17h10" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><circle cx="16" cy="7" r="2.6" stroke="currentColor" stroke-width="2.2" fill="none"/><circle cx="8" cy="17" r="2.6" stroke="currentColor" stroke-width="2.2" fill="none"/></svg></span><span><div class="n">Ekran</div><div class="s">Ayarlar</div></span></button>
+    </div>
+
+    <div class="side">
+      <div class="card np">
+        <div class="lbl">Şimdi çalıyor</div>
+        <div class="art" id="npArt"><svg width="64" height="64" viewBox="0 0 24 24"><path d="M9 18a3 3 0 1 1-2-2.83V5l12-2v11a3 3 0 1 1-2-2.83V6.3L9 7.7z" fill="currentColor"/></svg></div>
+        <div class="t" id="npT">Bir şey çalmıyor</div>
+        <div class="a" id="npA">YouTube Music veya YouTube aç</div>
+        <div class="ctr">
+          <button id="npPrev" aria-label="Önceki"><svg width="30" height="30" viewBox="0 0 24 24"><path d="M6 5h2v14H6zM20 5v14L9 12z" fill="currentColor"/></svg></button>
+          <button class="play" id="npPlay" aria-label="Oynat veya duraklat"><svg id="npIcon" width="32" height="32" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" fill="currentColor"/></svg></button>
+          <button id="npNext" aria-label="Sonraki"><svg width="30" height="30" viewBox="0 0 24 24"><path d="M16 5h2v14h-2zM4 5v14l11-7z" fill="currentColor"/></svg></button>
+        </div>
+      </div>
+      <div class="card status" id="status">
+        <div class="st ok allok"><i></i><span>CarPlay Ekranı hazır</span></div>
+        <div class="st" id="stMod"><i></i><span>Mod kontrol ediliyor</span></div>
+        <div class="st" id="stKey"><i></i><span>Tuş ayarı kontrol ediliyor</span></div>
+        <div class="st" id="stPlg"><i></i><span>Eklenti kontrol ediliyor</span></div>
+        <div class="keys"><b>Alt+←</b> geri, <b>Alt+Home</b> ana menü</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- AYARLAR -->
+  <div class="view hidden" id="settings">
+    <div class="shead"><div><h1>CarPlay Ekranı</h1><p>Oyun açıkken değiştir, Smart Dash'te bir saniye içinde görünür.</p></div><label class="namebox"><span>Adın</span><input id="uName" maxlength="20" placeholder="Örneğin Yasin" spellcheck="false" autocomplete="off"></label></div>
+    <div class="sgrid">
+      <div class="sgroup">
+        <h2>Görüntü</h2>
+        <div class="srow"><span>Parlaklık</span><input type="range" id="sDim" min="5" max="100" step="5"><b id="vDim"></b></div>
+        <div class="srow"><span>Beyazları yumuşat</span><input type="range" id="sW" min="0" max="100" step="5"><b id="vW"></b></div>
+        <div class="srow"><span>Akıcılık</span><input type="range" id="sF" min="10" max="30" step="5"><b id="vF"></b></div>
+        <p class="help" style="margin-top:0">Beyazlar gözünü alıyorsa önce yumuşatmayı artır, sonra parlaklığı kıs. Akıcılığı düşürmek oyunda biraz FPS kazandırır.</p>
+      </div>
+      <div class="sgroup">
+        <h2>Ekrana sığdır</h2>
+        <p class="help">Kenarlarda renkli şerit varsa boşluğu artır. Kenarlar siyah kalır.</p>
+        <div class="fit">
+          <div class="scr" aria-hidden="true"><div class="img" id="scrImg"></div></div>
+          <div class="rows">
+            <div class="srow"><span>Sol</span><input type="range" id="sL" min="0" max="25" step="1"><b id="vL"></b></div>
+            <div class="srow"><span>Üst</span><input type="range" id="sT" min="0" max="25" step="1"><b id="vT"></b></div>
+            <div class="srow"><span>Sağ</span><input type="range" id="sR" min="0" max="25" step="1"><b id="vR"></b></div>
+            <div class="srow"><span>Alt</span><input type="range" id="sB" min="0" max="25" step="1"><b id="vB"></b></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="sfoot"><button class="pill" id="sReset">Varsayılana dön</button></div>
+  </div>
+
+  <!-- HARITA (oyunun haritasi) -->
+  <div class="view hidden" id="map">
+    <div class="npf" id="npf"><div class="a" id="npfA"></div><div class="tx"><div class="t" id="npfT"></div><div class="s" id="npfS"></div></div>
+      <button id="npfP" aria-label="Oynat veya duraklat"><svg id="npfI" width="26" height="26" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" fill="currentColor"/></svg></button></div>
+  </div>
+
+  <!-- TARAYICI -->
+  <div class="view hidden" id="browser">
+    <div class="bbar">
+      <div class="urlbox">
+        <svg width="18" height="18" viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="10" rx="2.5" fill="currentColor"/><path d="M8 10V7a4 4 0 0 1 8 0v3" stroke="currentColor" stroke-width="2.2" fill="none"/></svg>
+        <input id="url" spellcheck="false" autocomplete="off" aria-label="Adres">
+        <div class="spin" id="spin"></div>
+      </div>
+      <button class="pill" id="paste2">Yapıştır</button>
+    </div>
+    <div class="wvs">
+      <webview id="wv-music" class="off" partition="persist:carplay" allowpopups src="about:blank"></webview>
+      <webview id="wv-web" class="off" partition="persist:carplay" allowpopups src="about:blank"></webview>
+    </div>
+  </div>
+</div>
+
+<div id="dimpx"></div>
+<div class="winbtns"><button id="wMin" title="Gizle (görüntü vermeye devam eder, Alt+Tab ile geri gelir)">–</button><button id="wClose" title="Kapat">✕</button></div>
+
+<script>
+const { ipcRenderer, clipboard } = require('electron');
+const $ = id => document.getElementById(id);
+const APPS = {
+  youtube: { url:'https://www.youtube.com', wv:'web' },
+  music:   { url:'https://music.youtube.com', wv:'music' },
+  google:  { url:'https://www.google.com', wv:'web' }
+};
+const wvs = { music:$('wv-music'), web:$('wv-web') };
+const loaded = { music:false, web:false };
+const fresh = { music:false, web:false };
+let active = null;      // 'music' | 'web' | null (ana ekran)
+let lastWv = 'web';
+
+/* saat */
+const pad = n => String(n).padStart(2,'0');
+const days = ['Paz','Pzt','Sal','Çar','Per','Cum','Cmt'], months=['Oca','Şub','Mar','Nis','May','Haz','Tem','Ağu','Eyl','Eki','Kas','Ara'];
+function tick(){ const d=new Date(); $('clock').textContent=pad(d.getHours())+':'+pad(d.getMinutes());
+  $('date').textContent=days[d.getDay()]+' '+d.getDate()+' '+months[d.getMonth()];
+  const h=d.getHours(); const nm=userName(); $('greet').textContent = (h<6?'İyi Geceler':h<12?'Günaydın':h<18?'İyi Yolculuklar':'İyi Akşamlar') + (nm?' '+nm:''); $('addName').style.display = nm?'none':''; }
+function store(k,v){ try{localStorage.setItem(k,v)}catch(e){} }
+function load(k){ try{return localStorage.getItem(k)}catch(e){return null} }
+function userName(){ const n=(load('cp_name')||'').trim(); return n ? n.charAt(0).toLocaleUpperCase('tr-TR')+n.slice(1) : ''; }
+tick(); setInterval(tick, 5000);
+
+/* gorunumler */
+function hideSettings(){ $('settings').classList.add('hidden'); }
+function showSettings(){
+  active = 'settings';
+  ['map','home','browser'].forEach(id => $(id).classList.add('hidden'));
+  $('settings').classList.remove('hidden');
+  Object.values(wvs).forEach(w => w.classList.add('off'));
+  markRail(); updateNav();
+}
+function showMap(){
+  active = 'map'; hideSettings();
+  $('map').classList.remove('hidden'); $('home').classList.add('hidden'); $('browser').classList.add('hidden');
+  Object.values(wvs).forEach(w => w.classList.add('off'));
+  markRail(); updateNav();
+}
+function showHome(){
+  active = null; hideSettings();
+  $('map').classList.add('hidden');
+  $('home').classList.remove('hidden'); $('browser').classList.add('hidden');
+  Object.values(wvs).forEach(w => w.classList.add('off'));
+  markRail(); updateNav();
+}
+function showWv(name){
+  active = name; lastWv = name; hideSettings();
+  $('map').classList.add('hidden');
+  $('home').classList.add('hidden'); $('browser').classList.remove('hidden');
+  for (const k in wvs) wvs[k].classList.toggle('off', k !== name);
+  markRail(); updateNav(); syncUrl();
+}
+function markRail(){
+  $('bMap').classList.toggle('on', active==='map');
+  $('bHome').classList.toggle('on', active===null);
+  $('bSet').classList.toggle('on', active==='settings');
+  document.querySelectorAll('.rapp').forEach(b => {
+    const a = APPS[b.dataset.app]; let on = false;
+    if ((active==='music'||active==='web') && a && a.wv === active) {
+      try { const u = wvs[active].getURL(); on = u.startsWith(a.url) || (b.dataset.app==='music' && active==='music'); } catch(e){}
+    }
+    b.classList.toggle('on', on);
+  });
+}
+
+function normalize(s){
+  s=(s||'').trim(); if(!s) return null;
+  if (/^https?:\/\//i.test(s)) return s;
+  if (/^[\w-]+(\.[\w-]+)+(:\d+)?(\/\S*)?$/.test(s)) return 'https://'+s;
+  return 'https://www.google.com/search?q='+encodeURIComponent(s);
+}
+function openUrl(u, where){
+  if(!u) return;
+  const target = where || (/^https?:\/\/music\.youtube\.com/i.test(u) ? 'music' : 'web');
+  store('cp_last', u); refreshLast();
+  fresh[target]=true; wvs[target].loadURL(u); loaded[target]=true;
+  showWv(target);
+}
+function openApp(name){
+  const a = APPS[name];
+  if (a.wv === 'music' && loaded.music) { showWv('music'); return; }
+  openUrl(a.url, a.wv);
+}
+document.querySelectorAll('[data-app]').forEach(b => b.addEventListener('click', () => openApp(b.dataset.app)));
+document.querySelectorAll('[data-url]').forEach(b => b.addEventListener('click', () => openUrl(b.dataset.url)));
+function refreshLast(){ const l=load('cp_last'); $('lastSub').textContent = l ? l.replace(/^https?:\/\/(www\.)?/,'').slice(0,24) : 'Henüz yok'; }
+refreshLast();
+$('lastApp').onclick = () => { const l=load('cp_last'); if(l) openUrl(l); else $('q').focus(); };
+
+/* arama / yapistir */
+const q=$('q');
+q.addEventListener('keydown', e => { if(e.key==='Enter') openUrl(normalize(q.value)); });
+$('goBtn').onclick = () => openUrl(normalize(q.value));
+$('paste').onclick = () => { const t=clipboard.readText().trim(); if(t){ q.value=t; openUrl(normalize(t)); } else q.focus(); };
+$('paste2').onclick = () => { const t=clipboard.readText().trim(); if(t) openUrl(normalize(t), active||'web'); };
+const urlIn=$('url');
+urlIn.addEventListener('keydown', e => { if(e.key==='Enter'){ openUrl(normalize(urlIn.value), active||'web'); urlIn.blur(); } });
+urlIn.addEventListener('focus', () => setTimeout(()=>urlIn.select(),0));
+
+/* gezinme */
+function cur(){ return (active==='music'||active==='web') ? wvs[active] : null; }
+function back(){
+  const w=cur();
+  if (w && w.canGoBack()) {
+    try { const i=w.getActiveIndex ? w.getActiveIndex() : -1; if (i>0 && w.getURLAtIndex && w.getURLAtIndex(i-1)==='about:blank') { showHome(); return; } } catch(e){}
+    w.goBack();
+  } else showHome();
+}
+function fwd(){ const w=cur(); if(w && w.canGoForward()) w.goForward(); else if(!active && loaded[lastWv]) showWv(lastWv); }
+$('bHome').onclick = showHome;
+$('bMap').onclick = showMap;
+$('tMap').onclick = showMap;
+$('bBack').onclick = back;
+$('bFwd').onclick = fwd;
+$('bReload').onclick = () => { const w=cur(); if(w) w.reload(); };
+function updateNav(){
+  const w=cur();
+  let canF=false; try{ canF = w ? w.canGoForward() : loaded[lastWv]; }catch(e){}
+  $('bBack').disabled = !active;  /* haritadan geri = ana menu */
+  $('bFwd').disabled = !canF;
+  $('bReload').disabled = !cur();
+}
+ipcRenderer.on('nav', (e, cmd) => {
+  if(cmd==='back') back(); if(cmd==='forward') fwd(); if(cmd==='home') showHome();
+  if(cmd==='url'){ if(!cur()){ showHome(); q.focus(); } else urlIn.focus(); }
+});
+document.addEventListener('keydown', e => {
+  if (e.altKey && e.key==='ArrowLeft') back();
+  if (e.altKey && e.key==='ArrowRight') fwd();
+  if (e.altKey && e.key==='Home') showHome();
+  if (e.ctrlKey && e.key.toLowerCase()==='l'){ e.preventDefault(); if(!active) q.focus(); else urlIn.focus(); }
+});
+document.addEventListener('mouseup', e => { if(e.button===3) back(); if(e.button===4) fwd(); });
+
+function syncUrl(){ const w=cur(); if(!w) return; try{ const u=w.getURL(); if(document.activeElement!==urlIn) urlIn.value = u==='about:blank'?'':u; }catch(e){} }
+for (const k in wvs){
+  const w=wvs[k];
+  w.addEventListener('did-navigate', () => { if(fresh[k]){ fresh[k]=false; try{ w.clearHistory(); }catch(e){} }
+    if(active===k){ syncUrl(); updateNav(); markRail(); } });
+  w.addEventListener('did-navigate-in-page', () => { if(active===k){ syncUrl(); updateNav(); markRail(); } });
+  w.addEventListener('did-start-loading', () => { if(active===k) $('spin').style.display='block'; });
+  w.addEventListener('did-stop-loading', () => { $('spin').style.display='none'; if(active===k){ syncUrl(); updateNav(); } });
+}
+
+/* simdi caliyor (YouTube Music / YouTube) */
+const NP_JS = `(() => {
+  const m = navigator.mediaSession && navigator.mediaSession.metadata;
+  const v = document.querySelector('video');
+  if (!m && !(v && (v.currentTime>0))) return null;
+  const art = m && m.artwork && m.artwork.length ? m.artwork[m.artwork.length-1].src : '';
+  return { t: m ? m.title : document.title, a: m ? m.artist : '', art, playing: v ? !v.paused : false };
+})()`;
+let npSource = null;
+async function pollNP(){
+  let best=null, src=null;
+  for (const k of ['music','web']){
+    if(!loaded[k]) continue;
+    try{ const r = await wvs[k].executeJavaScript(NP_JS, false);
+      if (r && r.t && (!best || (r.playing && !best.playing))) { best=r; src=k; } }catch(e){}
+  }
+  npSource = src;
+  if (best){
+    $('npT').textContent = best.t || '—'; $('npA').textContent = best.a || (src==='music'?'YouTube Music':'YouTube');
+    if (best.art){ $('npArt').style.backgroundImage=`url("${best.art}")`; $('npArt').innerHTML=''; $('mini').style.backgroundImage=`url("${best.art}")`; }
+    $('npIcon').innerHTML = best.playing ? '<path d="M7 5h4v14H7zM13 5h4v14h-4z" fill="currentColor"/>' : '<path d="M8 5v14l11-7z" fill="currentColor"/>';
+    $('miniPP').innerHTML = best.playing ? '<svg width="26" height="26" viewBox="0 0 24 24"><path d="M7 5h4v14H7zM13 5h4v14h-4z" fill="currentColor"/></svg>' : '<svg width="26" height="26" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" fill="currentColor"/></svg>';
+    $('mini').style.display='block';
+    $('npf').style.display='flex'; $('npfT').textContent=best.t||''; $('npfS').textContent=best.a||'';
+    if (best.art) $('npfA').style.backgroundImage=`url("${best.art}")`;
+    $('npfI').innerHTML = best.playing ? '<path d="M7 5h4v14H7zM13 5h4v14h-4z" fill="currentColor"/>' : '<path d="M8 5v14l11-7z" fill="currentColor"/>';
+  }
+}
+setInterval(pollNP, 1500);
+function npCmd(cmd){
+  if(!npSource) return;
+  const js = {
+    play: `(() => { const b=document.querySelector('#play-pause-button, .ytp-play-button'); if(b){b.click();return;} const v=document.querySelector('video'); if(v){ v.paused?v.play():v.pause(); } })()`,
+    next: `(() => { const b=document.querySelector('.next-button, .ytp-next-button'); if(b) b.click(); })()`,
+    prev: `(() => { const b=document.querySelector('.previous-button, .ytp-prev-button'); if(b) b.click(); else history.back(); })()`
+  }[cmd];
+  wvs[npSource].executeJavaScript(js, true).catch(()=>{});
+  setTimeout(pollNP, 400);
+}
+$('npPlay').onclick=()=>npCmd('play'); $('npfP').onclick=()=>npCmd('play'); $('npNext').onclick=()=>npCmd('next'); $('npPrev').onclick=()=>npCmd('prev');
+$('mini').onclick=()=>{ if(npSource) showWv(npSource); };
+$('npArt').onclick=()=>{ if(npSource) showWv(npSource); };
+
+$('wMin').onclick=()=>ipcRenderer.send('win','min');
+$('wClose').onclick=()=>ipcRenderer.send('win','close');
+updateNav();
+showMap();
+
+/* kamyon ekrani ayarlari -> Belgeler\Euro Truck Simulator 2\ets2_carplay.cfg (eklenti saniyede bir okur) */
+const DEF = { dim:100, w:85, fps:30, l:1, t:1, r:1, b:1 };
+let cfg = Object.assign({}, DEF);
+try { const j = JSON.parse(load('cp_screen')||'null'); if (j) Object.assign(cfg, j); } catch(e){}
+const S = { dim:['sDim','vDim'], w:['sW','vW'], fps:['sF','vF'], l:['sL','vL'], t:['sT','vT'], r:['sR','vR'], b:['sB','vB'] };
+const unit = k => k==='fps' ? ' fps' : '%';
+function pushCfg(){ store('cp_screen', JSON.stringify(cfg)); ipcRenderer.send('screencfg', cfg); }
+function paint(k){ const el=$(S[k][0]); const p=(cfg[k]-el.min)/(el.max-el.min)*100; el.style.setProperty('--p', p+'%'); $(S[k][1]).textContent = cfg[k] + unit(k); }
+function preview(){ const i=$('scrImg'); i.style.left=cfg.l+'%'; i.style.top=cfg.t+'%'; i.style.right=cfg.r+'%'; i.style.bottom=cfg.b+'%'; }
+function syncUI(){ for (const k in S){ $(S[k][0]).value = cfg[k]; paint(k); } preview(); }
+for (const k in S) $(S[k][0]).addEventListener('input', e => { cfg[k] = parseInt(e.target.value,10); paint(k); preview(); pushCfg(); });
+$('sReset').onclick = () => { cfg = Object.assign({}, DEF); syncUI(); pushCfg(); };
+$('bSet').onclick = showSettings; $('tSet').onclick = showSettings;
+$('uName').value = load('cp_name')||'';
+$('uName').addEventListener('input', e => { store('cp_name', e.target.value.trim()); tick(); });
+$('uName').addEventListener('keydown', e => { if(e.key==='Enter') e.target.blur(); });
+$('addName').onclick = () => { showSettings(); setTimeout(()=>$('uName').focus(), 50); };
+syncUI(); pushCfg();
+
+/* otomatik guncelleme (GitHub surumleri) */
+ipcRenderer.on('update', (e, u) => {
+  if (u && u.ready) { $('updT').textContent = u.version + ' hazır'; $('upd').classList.add('show'); }
+});
+$('updB').onclick = () => { $('updT').textContent = 'Güncelleniyor'; ipcRenderer.send('update-install'); };
+
+/* otomatik kurulum durumu */
+function setSt(id, r){ const el=$(id); if(!r) return; el.classList.toggle('ok', !!r.ok); el.classList.toggle('bad', !r.ok); el.querySelector('span').textContent=r.msg; }
+ipcRenderer.invoke('setup').then(r => {
+  if (!r || r.error) { setSt('stMod',{ok:false,msg:'Kurulum hatası: '+(r&&r.error)}); return; }
+  setSt('stMod', r.mod); setSt('stKey', r.keys); setSt('stPlg', r.plugin);
+  $('status').classList.toggle('ready', !!(r.mod && r.mod.ok && r.keys && r.keys.ok && r.plugin && r.plugin.ok));
+  if (!r.plugin.ok && r.plugin.dir) { const el=$('stPlg'); el.classList.add('link'); el.title='Eklenti klasörünü aç'; el.onclick=()=>ipcRenderer.send('open-dir', r.plugin.dir); }
+});
+</script>
+</body>
+</html>
