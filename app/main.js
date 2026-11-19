@@ -77,7 +77,22 @@ app.whenReady().then(() => {
   part.setPermissionRequestHandler((wc, perm, cb) => cb(true));
   createWindow();
   setupUpdater();
+  watchGame();
 });
+
+// Oyun kapaninca uygulama da kapansin (oyun bir kez calisirken goruldukten sonra)
+function watchGame() {
+  const { execFile } = require('child_process');
+  let seen = fromGame, gone = 0;
+  setInterval(() => {
+    execFile('tasklist', ['/FI', 'IMAGENAME eq eurotrucks2.exe', '/NH', '/FO', 'CSV'], { windowsHide: true }, (err, out) => {
+      if (err) return;
+      const running = /eurotrucks2\.exe/i.test(out || '');
+      if (running) { seen = true; gone = 0; }
+      else if (seen && ++gone >= 2) app.quit();
+    });
+  }, 4000);
+}
 
 // Otomatik guncelleme: GitHub'daki yeni surumu arka planda indirir, ana ekranda "Guncelle" cikar.
 let updater = null, updReady = null;
@@ -124,7 +139,7 @@ ipcMain.on('screencfg', (e, c) => {
     const n = (v, lo, hi, d) => { v = parseInt(v, 10); return isNaN(v) ? d : Math.max(lo, Math.min(hi, v)); };
     const dir = path.join(app.getPath('documents'), 'Euro Truck Simulator 2');
     require('fs').mkdirSync(dir, { recursive: true });
-    const txt = `parlaklik=${n(c.dim,5,100,100)}\nbeyaz=${n(c.w,0,100,85)}\nfps=${n(c.fps,10,30,30)}\nsol=${n(c.l,0,25,2)}\nust=${n(c.t,0,25,2)}\nsag=${n(c.r,0,25,0)}\nalt=${n(c.b,0,25,4)}\n`;
+    const txt = `parlaklik=${n(c.dim,5,100,100)}\nbeyaz=${n(c.w,0,100,85)}\nfps=${n(c.fps,10,60,60)}\nsol=${n(c.l,0,25,2)}\nust=${n(c.t,0,25,2)}\nsag=${n(c.r,0,25,0)}\nalt=${n(c.b,0,25,4)}\n`;
     require('fs').writeFileSync(path.join(dir, 'ets2_carplay.cfg'), txt);
   } catch (x) {}
 });

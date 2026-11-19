@@ -2,6 +2,13 @@
 
 Euro Truck Simulator 2'deki Scania Smart Dash orta ekranına CarPlay tarzı bir arayüz getirir. YouTube, YouTube Music, Google, Kick, radyo ve istediğin her linki kamyonun ekranında açarsın. Oyunun kendi haritası da bir dokunuşla geri gelir.
 
+## 3.0 ile gelenler
+
+- **60 fps:** kamyon ekranındaki görüntü saniyede 60 kareye çıktı, videolarda ses ile görüntü daha uyumlu (Ekran → Akıcılık).
+- **Daha yakın harita:** Smart Dash haritası yaklaşık 1,7 kat yakınlaştırıldı, hangi yoldan gidileceği daha net.
+- **Oyunla birlikte aç-kapa:** uygulama oyun açılınca kendiliğinden açılır, oyun kapanınca kendisi de kapanır.
+- **Otomatik güncelleme:** yeni sürümler arka planda iner, ana ekranda "Güncelle" düğmesi çıkar.
+
 ## Kurulum
 
 1. [Sürümler](../../releases/latest) sayfasından `ETS2-CarPlay-Kurulum.exe` dosyasını indir.

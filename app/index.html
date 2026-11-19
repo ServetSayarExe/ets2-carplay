@@ -261,7 +261,7 @@
         <h2>Görüntü</h2>
         <div class="srow"><span>Parlaklık</span><input type="range" id="sDim" min="5" max="100" step="5"><b id="vDim"></b></div>
         <div class="srow"><span>Beyazları yumuşat</span><input type="range" id="sW" min="0" max="100" step="5"><b id="vW"></b></div>
-        <div class="srow"><span>Akıcılık</span><input type="range" id="sF" min="10" max="30" step="5"><b id="vF"></b></div>
+        <div class="srow"><span>Akıcılık</span><input type="range" id="sF" min="10" max="60" step="5"><b id="vF"></b></div>
         <p class="help" style="margin-top:0">Beyazlar gözünü alıyorsa önce yumuşatmayı artır, sonra parlaklığı kıs. Akıcılığı düşürmek oyunda biraz FPS kazandırır.</p>
       </div>
       <div class="sgroup">
@@ -502,9 +502,10 @@ updateNav();
 showMap();
 
 /* kamyon ekrani ayarlari -> Belgeler\Euro Truck Simulator 2\ets2_carplay.cfg (eklenti saniyede bir okur) */
-const DEF = { dim:100, w:85, fps:30, l:2, t:2, r:0, b:4 };
+const DEF = { dim:100, w:85, fps:60, l:2, t:2, r:0, b:4 };
 let cfg = Object.assign({}, DEF);
 try { const j = JSON.parse(load('cp_screen')||'null'); if (j) Object.assign(cfg, j); } catch(e){}
+if (!load('cp_fps60')) { cfg.fps = 60; store('cp_fps60','1'); } /* 3.0: 60 fps varsayilan */
 const S = { dim:['sDim','vDim'], w:['sW','vW'], fps:['sF','vF'], l:['sL','vL'], t:['sT','vT'], r:['sR','vR'], b:['sB','vB'] };
 const unit = k => k==='fps' ? ' fps' : '%';
 function pushCfg(){ store('cp_screen', JSON.stringify(cfg)); ipcRenderer.send('screencfg', cfg); }

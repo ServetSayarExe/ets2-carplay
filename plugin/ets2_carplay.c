@@ -158,7 +158,7 @@ static u32            g_dim = 256; /* varsayilan %100 */
 static u8             g_lut[256];
 static u32            g_lutDim = 0, g_lutWhite = 999;
 static volatile i32   g_white = 85;  /* beyazlari yumusat 0..100 */
-static volatile i32   g_fps = 30;    /* 10..30 */
+static volatile i32   g_fps = 60;    /* 10..60 */
 /* parlak tonlari bastir: diz noktasina kadar dogrusal, sonrasi azaltilmis egimle; sonra parlaklik */
 static void build_lut(u32 dim, i32 white) {
     i32 knee = 230 - white * 11 / 10;          /* 230 .. 120 */
@@ -206,7 +206,7 @@ static int cfg_read(int* dim) {
     if (vals[0] >= 0) { int v = vals[0]; if (v < 5) v = 5; if (v > 100) v = 100; *dim = v; }
     for (int k = 1; k < 5; k++) if (vals[k] >= 0) { int v = vals[k]; if (v > 30) v = 30; g_inset[k - 1] = v; }
     if (vals[5] >= 0) g_white = vals[5] > 100 ? 100 : vals[5];
-    if (vals[6] >= 0) g_fps = vals[6] < 10 ? 10 : (vals[6] > 30 ? 30 : vals[6]);
+    if (vals[6] >= 0) g_fps = vals[6] < 10 ? 10 : (vals[6] > 60 ? 60 : vals[6]);
     return 1;
 }
 

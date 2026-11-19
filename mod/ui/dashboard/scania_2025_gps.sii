@@ -110,7 +110,7 @@ ui::text : _nameless._.sel_page {
 }
 
 ui::text : _nameless._.gps {
- text: "<color value=FF1C1611>\r\n<img src=/material/ui/white.mat xscale=stretch yscale=stretch>\r\n<color value=FFFFFFFF>\r\n<ret><img src=/material/ui/dashboard/bare_map.mat left=0.125 right=0.875 bottom=0.289 top=0.7109 xscale=stretch yscale=stretch>"
+ text: "<color value=FF1C1611>\r\n<img src=/material/ui/white.mat xscale=stretch yscale=stretch>\r\n<color value=FFFFFFFF>\r\n<ret><img src=/material/ui/dashboard/bare_map.mat left=0.2794 right=0.7206 bottom=0.3759 top=0.6241 xscale=stretch yscale=stretch>"
  coords_l: 0
  coords_r: 1440
  coords_t: 810
@@ -334,7 +334,7 @@ ui::text_common : _nameless._.clock2 {
 }
 
 ui::text : _nameless._.cp_map2 {
- text: "<color value=FF1C1611>\r\n<img src=/material/ui/white.mat xscale=stretch yscale=stretch>\r\n<color value=FFFFFFFF>\r\n<ret><img src=/material/ui/dashboard/bare_map.mat left=0.125 right=0.875 bottom=0.289 top=0.7109 xscale=stretch yscale=stretch>"
+ text: "<color value=FF1C1611>\r\n<img src=/material/ui/white.mat xscale=stretch yscale=stretch>\r\n<color value=FFFFFFFF>\r\n<ret><img src=/material/ui/dashboard/bare_map.mat left=0.2794 right=0.7206 bottom=0.3759 top=0.6241 xscale=stretch yscale=stretch>"
  coords_l: 0
  coords_r: 1440
  coords_t: 810
