@@ -22,6 +22,12 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
+      - name: Sürüm etiketi
+        if: github.event_name == 'workflow_dispatch'
+        shell: bash
+        run: |
+          V=v$(node -p "require('./package.json').version")
+          git ls-remote --exit-code --tags origin "refs/tags/$V" >/dev/null || { git tag "$V" && git push origin "$V"; }
       - run: npm install --no-audit --no-fund
       - run: npx electron-builder --win --publish always
         env:
