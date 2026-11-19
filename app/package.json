@@ -1,7 +1,7 @@
 {
   "name": "ets2-carplay",
   "productName": "ETS2 CarPlay",
-  "version": "3.1.1",
+  "version": "3.1.2",
   "description": "ETS2 Scania Smart Dash icin CarPlay tarzi ekran",
   "main": "main.js",
   "author": "servetsayarexe",
@@ -63,8 +63,7 @@
     ]
   },
   "dependencies": {
-    "electron-updater": "^6.3.9",
-    "@ghostery/adblocker-electron": "^2.5.2"
+    "electron-updater": "^6.3.9"
   },
   "repository": "https://github.com/ServetSayarExe/ets2-carplay"
 }

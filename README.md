@@ -2,10 +2,6 @@
 
 Euro Truck Simulator 2'deki Scania Smart Dash orta ekranına CarPlay tarzı bir arayüz getirir. YouTube, YouTube Music, Google, Kick, radyo ve istediğin her linki kamyonun ekranında açarsın. Oyunun kendi haritası da bir dokunuşla geri gelir.
 
-## 3.1 ile gelenler
-
-- **Reklam engelleyici:** uBlock Origin ve EasyList listeleriyle çalışan dahili engelleyici (Ghostery motoru). YouTube, Google ve diğer sitelerde reklamları ve izleyicileri keser. Ekran ayarlarından açılıp kapatılabilir.
-
 ## 3.0 ile gelenler
 
 - **60 fps:** kamyon ekranındaki görüntü saniyede 60 kareye çıktı, videolarda ses ile görüntü daha uyumlu (Ekran → Akıcılık).
