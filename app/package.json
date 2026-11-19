@@ -58,7 +58,7 @@
         "provider": "github",
         "owner": "ServetSayarExe",
         "repo": "ets2-carplay",
-        "releaseType": "release"
+        "releaseType": "draft"
       }
     ]
   },
