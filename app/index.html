@@ -153,7 +153,10 @@
   .tog{height:44px;padding:0 20px;font-size:18px;justify-self:end}
   .tog[aria-pressed="true"]{background:var(--amber);color:var(--amber-ink)}
   .adnote{font-size:16px;color:var(--muted)}
-  .sfoot{display:flex;justify-content:flex-start}
+  .sfoot{display:flex;justify-content:space-between;align-items:center}
+  .updrow{display:flex;align-items:center;gap:16px;font-size:18px;color:var(--muted)}
+  #updBtn.go{background:var(--amber);color:var(--amber-ink)}
+  #updBtn[disabled]{opacity:.6;pointer-events:none}
   #bSet{margin-top:6px}
 
   /* tarayici */
@@ -282,7 +285,7 @@
         </div>
       </div>
     </div>
-    <div class="sfoot"><button class="pill" id="sReset">Varsayılana dön</button></div>
+    <div class="sfoot"><button class="pill" id="sReset">Varsayılana dön</button><div class="updrow"><span id="updInfo">Sürüm kontrol ediliyor</span><button class="pill" id="updBtn">Güncellemeleri kontrol et</button></div></div>
   </div>
 
   <!-- HARITA (oyunun haritasi) -->
@@ -521,6 +524,30 @@ $('sReset').onclick = () => { cfg = Object.assign({}, DEF); syncUI(); pushCfg();
 $('bSet').onclick = showSettings; $('tSet').onclick = showSettings;
 function adPaint(on){ $('adTog').setAttribute('aria-pressed', on?'true':'false'); $('adTog').textContent = on?'Açık':'Kapalı'; }
 ipcRenderer.invoke('adblock-get').then(r => { adPaint(r.on); if (!r.ready) $('adNote').textContent = 'Listeler indiriliyor'; }).catch(()=>{});
+ipcRenderer.on('adblock-ready', () => { $('adNote').textContent = 'uBlock Origin listeleri'; });
+
+/* guncelleme kontrolu (ayarlar) */
+let updCur = '';
+function updPaint(u){
+  const btn=$('updBtn'), info=$('updInfo'); btn.classList.remove('go'); btn.disabled=false;
+  const cur = updCur ? 'Sürüm '+updCur : '';
+  switch(u.state){
+    case 'checking': info.textContent='Kontrol ediliyor'; btn.disabled=true; break;
+    case 'none': info.textContent=cur+', güncel'; btn.textContent='Güncellemeleri kontrol et'; break;
+    case 'downloading': info.textContent=u.version+' indiriliyor'+(u.percent?' (%'+u.percent+')':''); btn.textContent='İndiriliyor'; btn.disabled=true; break;
+    case 'ready': info.textContent=u.version+' hazır, sen onaylayınca ya da uygulama kapanınca kurulur'; btn.textContent='Şimdi güncelle'; btn.classList.add('go'); break;
+    case 'error': info.textContent=cur+', güncelleme sunucusuna ulaşılamadı'; btn.textContent='Tekrar dene'; break;
+    case 'dev': info.textContent='Geliştirme sürümü, güncelleme yok'; btn.disabled=true; break;
+    default: info.textContent=cur; btn.textContent='Güncellemeleri kontrol et';
+  }
+  btn.dataset.state=u.state;
+}
+ipcRenderer.invoke('upd-get').then(u => { updCur=u.current||''; updPaint(u); }).catch(()=>{});
+ipcRenderer.on('upd-status', (e,u) => updPaint(u));
+$('updBtn').onclick = () => {
+  if ($('updBtn').dataset.state==='ready') { $('updInfo').textContent='Güncelleniyor, uygulama yeniden açılacak'; $('updBtn').disabled=true; ipcRenderer.send('update-install'); }
+  else ipcRenderer.send('upd-check');
+};
 $('adTog').onclick = () => { const on = $('adTog').getAttribute('aria-pressed') !== 'true'; adPaint(on); ipcRenderer.send('adblock-set', on); };
 $('uName').value = load('cp_name')||'';
 $('uName').addEventListener('input', e => { store('cp_name', e.target.value.trim()); tick(); });

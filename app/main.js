@@ -96,6 +96,7 @@ async function setupAdblock(part) {
     try { const st = await fsp.stat(cache); if (Date.now() - st.mtimeMs > 7 * 864e5) await fsp.unlink(cache); } catch (e) {}
     blocker = await ElectronBlocker.fromPrebuiltAdsAndTracking(fetch, { path: cache, read: fsp.readFile, write: fsp.writeFile });
     if (adOn) blocker.enableBlockingInSession(part);
+    if (win && !win.isDestroyed()) win.webContents.send('adblock-ready');
   } catch (e) { blocker = null; console.error('reklam engelleyici baslatilamadi', e); }
 }
 ipcMain.handle('adblock-get', () => ({ on: adOn, ready: !!blocker }));
@@ -119,22 +120,36 @@ function watchGame() {
   }, 4000);
 }
 
-// Otomatik guncelleme: GitHub'daki yeni surumu arka planda indirir, ana ekranda "Guncelle" cikar.
-let updater = null, updReady = null;
+// Otomatik guncelleme: GitHub'daki yeni surumu arka planda indirir. Kurulum yalnizca kullanici
+// "Guncelle"ye basinca ya da uygulama kapanirken olur (bir sonraki acilista yeni surum gelir).
+let updater = null, updReady = null, updState = { state: 'idle' };
+function updSend(s) { updState = s; if (win && !win.isDestroyed()) win.webContents.send('upd-status', s); }
 function setupUpdater() {
-  if (!app.isPackaged) return;
-  try { updater = require('electron-updater').autoUpdater; } catch (e) { return; }
+  if (!app.isPackaged) { updState = { state: 'dev' }; return; }
+  try { updater = require('electron-updater').autoUpdater; } catch (e) { updState = { state: 'error' }; return; }
   updater.autoDownload = true;
   updater.autoInstallOnAppQuit = true;
+  updater.on('checking-for-update', () => { if (!updReady) updSend({ state: 'checking' }); });
+  updater.on('update-not-available', () => { if (!updReady) updSend({ state: 'none' }); });
+  updater.on('update-available', (i) => updSend({ state: 'downloading', version: i.version, percent: 0 }));
+  updater.on('download-progress', (p) => updSend({ state: 'downloading', version: updState.version, percent: Math.round(p.percent || 0) }));
   updater.on('update-downloaded', (i) => {
     updReady = i.version;
+    updSend({ state: 'ready', version: i.version });
     if (win) win.webContents.send('update', { ready: true, version: i.version });
   });
-  updater.on('error', () => {});
-  const check = () => { if (!updReady) updater.checkForUpdates().catch(() => {}); };
+  updater.on('error', () => { if (!updReady) updSend({ state: 'error' }); });
+  const check = () => { if (!updReady && updState.state !== 'downloading') updater.checkForUpdates().catch(() => {}); };
   setTimeout(check, 8000);
   setInterval(check, 3 * 60 * 60 * 1000);
 }
+ipcMain.handle('upd-get', () => ({ ...updState, current: app.getVersion() }));
+ipcMain.on('upd-check', () => {
+  if (!updater) { updSend(updState); return; }
+  if (updReady) { updSend({ state: 'ready', version: updReady }); return; }
+  if (updState.state === 'downloading') return;
+  updater.checkForUpdates().catch(() => updSend({ state: 'error' }));
+});
 ipcMain.on('update-install', () => { if (updater && updReady) setImmediate(() => updater.quitAndInstall(true, true)); });
 
 // Webview icindeki yeni pencere acma isteklerini ayni ekranda ac
