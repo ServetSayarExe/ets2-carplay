@@ -179,7 +179,7 @@ static void cfg_init(void) {
     int i = 0; while (tail[i]) { g_cfgPath[n + i] = tail[i]; i++; } g_cfgPath[n + i] = 0;
 }
 static void lg(const char* msg);
-static volatile i32 g_inset[4] = { 1, 1, 1, 1 }; /* sol, ust, sag, alt (yuzde) */
+static volatile i32 g_inset[4] = { 2, 2, 0, 4 }; /* sol, ust, sag, alt (yuzde) */
 static int kv_match(const char* b, u32 i, u32 r, const char* k) {
     u32 j = 0; while (k[j]) { if (i + j >= r || b[i + j] != k[j]) return 0; j++; } return (int)j;
 }

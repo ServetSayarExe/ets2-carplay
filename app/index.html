@@ -502,7 +502,7 @@ updateNav();
 showMap();
 
 /* kamyon ekrani ayarlari -> Belgeler\Euro Truck Simulator 2\ets2_carplay.cfg (eklenti saniyede bir okur) */
-const DEF = { dim:100, w:85, fps:30, l:1, t:1, r:1, b:1 };
+const DEF = { dim:100, w:85, fps:30, l:2, t:2, r:0, b:4 };
 let cfg = Object.assign({}, DEF);
 try { const j = JSON.parse(load('cp_screen')||'null'); if (j) Object.assign(cfg, j); } catch(e){}
 const S = { dim:['sDim','vDim'], w:['sW','vW'], fps:['sF','vF'], l:['sL','vL'], t:['sT','vT'], r:['sR','vR'], b:['sB','vB'] };
