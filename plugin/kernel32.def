@@ -21,3 +21,7 @@ ReadFile
 GetEnvironmentVariableW
 GetFileAttributesW
 CreateProcessW
+CreateWaitableTimerExW
+SetWaitableTimer
+QueryPerformanceCounter
+QueryPerformanceFrequency

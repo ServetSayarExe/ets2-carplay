@@ -1,7 +1,8 @@
 // ETS2 CarPlay - ilk acilista otomatik kurulum
 // 1) Smart Dash modunu Belgeler\Euro Truck Simulator 2\mod klasorune koyar
 // 2) Oyunun "infotainment" kontrolunu (bos ise) F8 tusuna atar
-// 3) PrismTextureStreamer eklentisinin kurulu olup olmadigini kontrol eder
+// 3) Ekran eklentisini (ets2_carplay.dll) oyunun plugins klasorune koyar; ayni isi yapan
+//    eski PrismTextureStreamer eklentisi cakistigi icin silmeden devre disi birakir
 const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
@@ -86,7 +87,7 @@ function bindF8(app) {
     const done = files.every(f => /mix infotainment `[^`]*keyboard\./.test(fs.readFileSync(f, 'utf8')));
     return { ok: done, msg: done ? 'F8 tuşu atanmış' : 'Oyun açık — kapatıp uygulamayı yeniden aç' };
   }
-  let changed = 0, already = 0, busy = 0;
+  let changed = 0, already = 0, busy = 0, custom = 0;
   for (const f of files) {
     let s = fs.readFileSync(f, 'utf8');
     if (/mix infotainment `[^`]*keyboard\./.test(s)) { already++; continue; }
@@ -95,10 +96,11 @@ function bindF8(app) {
     if (n !== s) {
       try { fs.copyFileSync(f, f + '.carplay.bak'); } catch (e) {}
       fs.writeFileSync(f, n); changed++;
-    }
+    } else custom++; // satir varsayilan halinde degil: elle degistirilmis, dokunmuyoruz
   }
-  if (busy && !changed && !already) return { ok: false, msg: 'F8 başka bir işe atanmış — Ayarlar › Tuşlar › Infotainment' };
-  return { ok: true, msg: changed ? 'F8 tuşu atandı' : 'F8 tuşu atanmış' };
+  if (changed || already) return { ok: true, msg: changed ? 'F8 tuşu atandı' : 'F8 tuşu atanmış' };
+  if (busy) return { ok: false, msg: 'F8 başka bir işe atanmış — Ayarlar › Tuşlar › Infotainment' };
+  return { ok: false, msg: 'Infotainment tuşu özelleştirilmiş — oyunda Ayarlar › Tuşlar › Infotainment\'tan ata' };
 }
 
 function installPlugin(app) {
@@ -114,7 +116,7 @@ function installPlugin(app) {
     for (const n of fs.readdirSync(dir)) {
       if (/^PrismTextureStreamer.*\.dll$/i.test(n)) {
         if (gameRunning()) { notes.push('eski eklenti için oyunu kapat'); continue; }
-        try { fs.renameSync(path.join(dir, n), path.join(dir, n + '.devre_disi')); notes.push('eski eklenti devre dışı'); } catch (e) {}
+        try { fs.renameSync(path.join(dir, n), path.join(dir, n + '.devre_disi')); notes.push(n + ' çakıştığı için devre dışı bırakıldı (.devre_disi)'); } catch (e) {}
       }
     }
     const a = fs.readFileSync(src);

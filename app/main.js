@@ -1,4 +1,6 @@
-const { app, BrowserWindow, session, ipcMain, shell, nativeTheme } = require('electron');
+const { app, BrowserWindow, session, ipcMain, shell, nativeTheme, screen } = require('electron');
+// castLabs Electron (ECS): Widevine CDM'i (Netflix, Prime Video) 'components' yukler; normal Electron'da yoktur.
+const { components } = require('electron');
 const { runSetup } = require('./setup');
 const path = require('path');
 
@@ -11,6 +13,13 @@ app.commandLine.appendSwitch('disable-backgrounding-occluded-windows');
 app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required');
 // Renkler birebir kalsin: oyun eklentisi saf macentayi (FF00FF) seffaf yapar
 app.commandLine.appendSwitch('force-color-profile', 'srgb');
+// Tam ekran video Chromium'da ayri bir donanim katmaninda (DirectComposition overlay) cizilir.
+// Eklentinin PrintWindow yakalamasi o katmani goremez; videonun disindaki seritlere baslatilmamis
+// GPU bellegi gelir ve oyundaki ekranda rastgele renkler gorunur. Butun icerik tek yuzeyde cizilsin.
+app.commandLine.appendSwitch('disable-direct-composition');
+app.commandLine.appendSwitch('disable-direct-composition-video-overlays');
+// Donanimla cozulen video kareleri de yakalamada bozuk gelebiliyor (oyundaki ekranda renk oynamasi): yazilimla coz.
+app.commandLine.appendSwitch('disable-accelerated-video-decode');
 
 let win;
 const fromGame = process.argv.includes('--oyundan');
@@ -18,7 +27,10 @@ let parkedFrom = null;
 function park() {
   if (!win || parkedFrom) return;
   parkedFrom = win.getPosition();
-  win.setPosition(-5000, 0);
+  // Butun monitorlerin solunda kalan bir nokta (solda ikinci monitor varsa -5000 gorunur olabilirdi)
+  let minX = 0;
+  try { for (const d of screen.getAllDisplays()) minX = Math.min(minX, d.bounds.x); } catch (e) {}
+  win.setPosition(minX - 3000, 0);
 }
 function unpark() {
   if (!win || !parkedFrom) return;
@@ -67,14 +79,23 @@ function createWindow() {
   });
 }
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
+  // Widevine hazir olmadan pencere acilirsa DRM'li siteler 'video kullanilamiyor' der
+  if (components && components.whenReady) {
+    try { await components.whenReady(); console.log('widevine:', JSON.stringify(components.status())); }
+    catch (e) { console.log('widevine yuklenemedi:', e && e.message); }
+  }
   // Siteler koyu temada acilsin (YouTube, Google...) -> kamyon ekraninda beyaz alan parlamasin
   nativeTheme.themeSource = 'dark';
   const ua = chromeUA();
   app.userAgentFallback = ua;
   const part = session.fromPartition('persist:carplay');
   part.setUserAgent(ua);
-  part.setPermissionRequestHandler((wc, perm, cb) => cb(true));
+  // Sitelere yalnizca video/muzik icin gerekenler: tam ekran, panoya yazma, korumali icerik (DRM).
+  // Kamera, mikrofon, konum, bildirim vb. sessizce reddedilir.
+  const ALLOWED = new Set(['fullscreen', 'clipboard-sanitized-write', 'mediaKeySystem']);
+  part.setPermissionRequestHandler((wc, perm, cb) => cb(ALLOWED.has(perm)));
+  part.setPermissionCheckHandler((wc, perm) => ALLOWED.has(perm));
   createWindow();
   setupUpdater();
   watchGame();
@@ -137,6 +158,10 @@ ipcMain.on('update-install', () => { if (updater && updReady) setImmediate(() =>
 app.on('web-contents-created', (e, contents) => {
   if (contents.getType() === 'webview') {
     contents.setWindowOpenHandler(({ url }) => { contents.loadURL(url); return { action: 'deny' }; });
+    // Tam ekranda videonun etrafi her zaman siyah kalsin (seffaf zemin yakalamada bos kalmasin)
+    contents.on('dom-ready', () => {
+      contents.insertCSS(':fullscreen,:-webkit-full-screen{background:#000!important}::backdrop{background:#000!important}video{background:#000!important}').catch(() => {});
+    });
     contents.on('before-input-event', (ev, input) => {
       if (input.type !== 'keyDown') return;
       if (input.alt && input.key === 'ArrowLeft') { win.webContents.send('nav', 'back'); ev.preventDefault(); }
@@ -160,7 +185,7 @@ ipcMain.on('screencfg', (e, c) => {
     const n = (v, lo, hi, d) => { v = parseInt(v, 10); return isNaN(v) ? d : Math.max(lo, Math.min(hi, v)); };
     const dir = path.join(app.getPath('documents'), 'Euro Truck Simulator 2');
     require('fs').mkdirSync(dir, { recursive: true });
-    const txt = `parlaklik=${n(c.dim,5,200,55)}\nbeyaz=${n(c.w,0,100,85)}\nfps=${n(c.fps,10,60,60)}\nsol=${n(c.l,0,25,2)}\nust=${n(c.t,0,25,2)}\nsag=${n(c.r,0,25,0)}\nalt=${n(c.b,0,25,4)}\n`;
+    const txt = `parlaklik=${n(c.dim,5,200,55)}\nbeyaz=${n(c.w,0,100,85)}\nfps=${n(c.fps,10,60,60)}\nsol=${n(c.l,0,25,2)}\nust=${n(c.t,0,25,2)}\nsag=${n(c.r,0,25,2)}\nalt=${n(c.b,0,25,3)}\n`;
     require('fs').writeFileSync(path.join(dir, 'ets2_carplay.cfg'), txt);
   } catch (x) {}
 });

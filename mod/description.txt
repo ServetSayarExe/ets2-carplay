@@ -1,2 +1,2 @@
 Scania Smart Dash orta ekrani icin CarPlay tarzi arayuz.
-Sol uygulama cubugu, buyuk harita, sag tarafta navigasyon / muzik / klima kartlari.
+ETS2 CarPlay uygulamasinin goruntusunu ekrana getirir; harita gorunumunde oyunun kendi navigasyonu (1,7 kat yakin) alttan gorunur.

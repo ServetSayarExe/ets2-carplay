@@ -1,6 +1,6 @@
-# Yeni sürüm: app/package.json'daki "version"ı artır, "v2.5.1" gibi bir etiket (tag) gönder
-# ya da Actions sekmesinden bu iş akışını elle çalıştır. Kurulum dosyası otomatik derlenip yayınlanır,
-# kullanıcıların uygulaması kendini günceller.
+# Yeni sürüm: app/package.json'daki "version"ı artır, sonra Actions sekmesinden bu iş akışını elle
+# çalıştır (etiketi kendisi oluşturur) ya da package.json ile AYNI sürümde bir etiket gönder (ör. v3.1.6).
+# Kurulum dosyası otomatik derlenip yayınlanır, kullanıcıların uygulaması kendini günceller.
 name: Sürüm derle ve yayınla
 
 on:
@@ -28,6 +28,10 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           V=v$(node -p "require('./package.json').version")
+          # etiketle tetiklendiyse etiket package.json sürümüyle aynı olmalı (yoksa yanlış sürüm yayınlanır)
+          if [ "$GITHUB_REF_TYPE" = "tag" ] && [ "$GITHUB_REF_NAME" != "$V" ]; then
+            echo "::error::Etiket $GITHUB_REF_NAME, package.json sürümü $V ile uyuşmuyor"; exit 1
+          fi
           echo "V=$V" >> $GITHUB_ENV
           # ayni etiketli eski ya da yarim kalmis surumleri temizle
           for id in $(gh api "repos/$GITHUB_REPOSITORY/releases?per_page=100" -q ".[] | select(.tag_name==\"$V\") | .id"); do

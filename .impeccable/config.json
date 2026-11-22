@@ -1,0 +1,26 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "dark-glow",
+        "value": "*",
+        "files": [
+          "app/index.html"
+        ],
+        "createdAt": "2026-11-22T21:15:26.643Z",
+        "reason": "Claude, per the direction contract in .impeccable/surfaces/app-index-html.md: the sodium light pool's offset soft shadow is the named signature move, applied only to active/playing/hovered state"
+      },
+      {
+        "rule": "dark-glow",
+        "value": "*",
+        "files": [
+          "**/app/index.html"
+        ],
+        "createdAt": "2026-11-22T21:19:29.455Z",
+        "reason": "Claude, per the direction contract in .impeccable/surfaces/app-index-html.md: the sodium light pool's offset soft shadow is the named signature move, applied only to active/playing/hovered state"
+      }
+    ]
+  }
+}

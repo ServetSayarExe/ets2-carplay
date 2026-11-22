@@ -1,0 +1,524 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-22T21:41:37+00:00",
+  "title": "Design System: ETS2 CarPlay",
+  "extensions": {
+    "colorMeta": {
+      "stage-key": {
+        "role": "reserved",
+        "displayName": "Stage Key",
+        "canonical": "#100020",
+        "note": "Protocol value for the game plugin; not a design colour. No ramp."
+      },
+      "map-marker": {
+        "role": "reserved",
+        "displayName": "Map Marker",
+        "canonical": "#1337c4",
+        "note": "Protocol value for the game plugin; not a design colour. No ramp."
+      },
+      "rail-black": {
+        "role": "neutral",
+        "displayName": "Rail Black",
+        "canonical": "#000000",
+        "tonalRamp": [
+          "#262626",
+          "#404040",
+          "#595959",
+          "#7a7a7a",
+          "#999999",
+          "#b8b8b8",
+          "#d6d6d6",
+          "#f2f2f2"
+        ]
+      },
+      "page": {
+        "role": "neutral",
+        "displayName": "Night Page",
+        "canonical": "#0b0c0e",
+        "tonalRamp": [
+          "#242529",
+          "#3a3e45",
+          "#505662",
+          "#6c7689",
+          "#8e95a4",
+          "#b1b5be",
+          "#d3d5d9",
+          "#f2f2f3"
+        ]
+      },
+      "disc": {
+        "role": "neutral",
+        "displayName": "Disc",
+        "canonical": "#0f1013",
+        "tonalRamp": [
+          "#242529",
+          "#3b3d45",
+          "#515562",
+          "#6c7388",
+          "#8e94a4",
+          "#b1b5be",
+          "#d3d5d9",
+          "#f2f2f3"
+        ]
+      },
+      "disc-raised": {
+        "role": "neutral",
+        "displayName": "Disc Raised",
+        "canonical": "#191b20",
+        "tonalRamp": [
+          "#242529",
+          "#3a3d45",
+          "#505562",
+          "#6c7489",
+          "#8e94a4",
+          "#b1b5be",
+          "#d3d5d9",
+          "#f2f2f3"
+        ]
+      },
+      "disc-pressed": {
+        "role": "neutral",
+        "displayName": "Disc Pressed",
+        "canonical": "#24272e",
+        "tonalRamp": [
+          "#242529",
+          "#3a3e45",
+          "#505662",
+          "#6c7589",
+          "#8e95a4",
+          "#b1b5be",
+          "#d3d5d9",
+          "#f2f2f3"
+        ]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Warm Bone (ink)",
+        "canonical": "#f6f5f1",
+        "tonalRamp": [
+          "#2b2921",
+          "#494636",
+          "#696349",
+          "#948a60",
+          "#ada585",
+          "#c3beac",
+          "#dbd9d1",
+          "#f4f3f1"
+        ]
+      },
+      "ink-quiet": {
+        "role": "neutral",
+        "displayName": "Quiet Ink",
+        "canonical": "#9c998f",
+        "tonalRamp": [
+          "#282725",
+          "#42413d",
+          "#5e5c55",
+          "#827e73",
+          "#9f9c93",
+          "#bbb9b4",
+          "#d8d7d5",
+          "#f3f2f2"
+        ]
+      },
+      "engaged": {
+        "role": "primary",
+        "displayName": "Warm Bone (engaged fill)",
+        "canonical": "#f6f5f1",
+        "tonalRamp": [
+          "#2b2921",
+          "#494636",
+          "#696349",
+          "#948a60",
+          "#ada585",
+          "#c3beac",
+          "#dbd9d1",
+          "#f4f3f1"
+        ]
+      },
+      "engaged-ink": {
+        "role": "primary",
+        "displayName": "Disc Black (engaged ink)",
+        "canonical": "#0f1013",
+        "tonalRamp": [
+          "#242529",
+          "#3b3d45",
+          "#515562",
+          "#6c7388",
+          "#8e94a4",
+          "#b1b5be",
+          "#d3d5d9",
+          "#f2f2f3"
+        ]
+      },
+      "status-bad": {
+        "role": "status",
+        "displayName": "Signal Coral",
+        "canonical": "#ff7a59",
+        "tonalRamp": [
+          "#3c1910",
+          "#6c2513",
+          "#a22d10",
+          "#f23203",
+          "#f3633f",
+          "#ec9883",
+          "#eec8be",
+          "#f8efec"
+        ]
+      },
+      "status-good": {
+        "role": "status",
+        "displayName": "Signal Mint",
+        "canonical": "#7ee2a0",
+        "tonalRamp": [
+          "#183422",
+          "#245c37",
+          "#2b884a",
+          "#2fc662",
+          "#60d287",
+          "#96d9ad",
+          "#c7e5d1",
+          "#eff6f1"
+        ]
+      },
+      "app-youtube": {
+        "role": "tertiary",
+        "displayName": "YouTube Red",
+        "canonical": "#ff4f45",
+        "tonalRamp": [
+          "#3c1210",
+          "#6c1813",
+          "#a21810",
+          "#f21003",
+          "#f3493f",
+          "#ec8983",
+          "#eec1be",
+          "#f8edec"
+        ]
+      },
+      "app-music": {
+        "role": "tertiary",
+        "displayName": "Music Pink",
+        "canonical": "#ff6f9c",
+        "tonalRamp": [
+          "#3c101e",
+          "#6c132f",
+          "#a2103e",
+          "#f2034e",
+          "#f33f77",
+          "#ec83a4",
+          "#eebecd",
+          "#f8ecf0"
+        ]
+      },
+      "app-google": {
+        "role": "tertiary",
+        "displayName": "Google Blue",
+        "canonical": "#79acff",
+        "tonalRamp": [
+          "#10213c",
+          "#13356c",
+          "#1048a2",
+          "#035ef2",
+          "#3f84f3",
+          "#83abec",
+          "#bed0ee",
+          "#ecf1f8"
+        ]
+      },
+      "app-radio": {
+        "role": "tertiary",
+        "displayName": "Radio Green",
+        "canonical": "#6ddf7c",
+        "tonalRamp": [
+          "#18341c",
+          "#235c2b",
+          "#2a8837",
+          "#2ec742",
+          "#60d26f",
+          "#96d99f",
+          "#c7e6cb",
+          "#eef6ef"
+        ]
+      },
+      "app-kick": {
+        "role": "tertiary",
+        "displayName": "Kick Lime",
+        "canonical": "#5ff22c",
+        "tonalRamp": [
+          "#1d3a13",
+          "#2d6718",
+          "#3a9a19",
+          "#47e411",
+          "#73e84a",
+          "#a1e689",
+          "#ccecc1",
+          "#f0f7ed"
+        ]
+      },
+      "app-news": {
+        "role": "tertiary",
+        "displayName": "News Teal",
+        "canonical": "#4fd6c8",
+        "tonalRamp": [
+          "#183431",
+          "#245c56",
+          "#2c877d",
+          "#30c5b5",
+          "#61d1c5",
+          "#97d8d2",
+          "#c7e5e2",
+          "#eff6f5"
+        ]
+      },
+      "app-last": {
+        "role": "tertiary",
+        "displayName": "Last-Link Stone",
+        "canonical": "#d8d4ca",
+        "tonalRamp": [
+          "#2a2823",
+          "#474339",
+          "#645e4e",
+          "#8d8268",
+          "#a79f8b",
+          "#c0bbb0",
+          "#dad8d3",
+          "#f3f3f1"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "Home greeting in the bottom-left caption; one per screen."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Settings view title."
+      },
+      "clock": {
+        "displayName": "Clock",
+        "purpose": "Rail clock, tabular figures."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Settings group headings."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Sub-caption, settings labels, input text (18-20px)."
+      },
+      "body-strong": {
+        "displayName": "Body Strong",
+        "purpose": "Now-playing title, slider values."
+      },
+      "help": {
+        "displayName": "Help",
+        "purpose": "Explanatory settings copy in Quiet Ink, max 58ch."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "App labels under stack discs, always on an opaque Disc pill."
+      }
+    },
+    "shadows": [
+      {
+        "name": "lift",
+        "value": "0 10px 24px -10px rgba(0,0,0,.75)",
+        "purpose": "Every floating control over the stage: discs, search pill, chips, now-playing strip, mini disc."
+      },
+      {
+        "name": "focus-ring-field",
+        "value": "0 0 0 2px #f6f5f1",
+        "purpose": "Focus on search, URL and name fields."
+      },
+      {
+        "name": "focus-ring-need",
+        "value": "0 0 0 3px #f6f5f1",
+        "purpose": "Search pill hint when the user must paste or type first."
+      },
+      {
+        "name": "stage-scrim",
+        "value": "linear-gradient(180deg,rgba(0,0,0,0) 0%,rgba(0,0,0,.42) 45%,rgba(0,0,0,.7) 100%); 360px tall from the bottom edge",
+        "purpose": "Backs the home caption; becomes a real translucent scrim in the truck through the plugin's magenta un-mixing."
+      }
+    ],
+    "motion": [
+      {
+        "name": "engage",
+        "value": "220ms cubic-bezier(.2,1.4,.4,1), scale .86 to 1",
+        "purpose": "A disc taking the engaged fill."
+      },
+      {
+        "name": "control-tint",
+        "value": "background 120ms",
+        "purpose": "Hover tint on discs and pills."
+      },
+      {
+        "name": "press",
+        "value": "transform 80ms, scale .94",
+        "purpose": "Disc press."
+      },
+      {
+        "name": "view-change",
+        "value": "none (hard snap)",
+        "purpose": "Switching home, browser and settings views."
+      },
+      {
+        "name": "reduced-motion",
+        "value": "all transitions and animations off",
+        "purpose": "prefers-reduced-motion: reduce."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "window",
+        "value": "1440x810 fixed; no responsive breakpoints"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Disc",
+      "kind": "button",
+      "refersTo": "disc",
+      "description": "The single control language: a 56px near-black circle with a warm-white glyph and the Lift shadow.",
+      "html": "<button class=\"ds-disc\" aria-label=\"Harita\"><svg width=\"26\" height=\"26\" viewBox=\"0 0 24 24\"><path d=\"M12 2.5a7 7 0 0 0-7 7c0 5 7 12.5 7 12.5s7-7.5 7-12.5a7 7 0 0 0-7-7zm0 9.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5z\" fill=\"currentColor\"/></svg></button>",
+      "css": ".ds-disc{width:56px;height:56px;border-radius:50%;background:#0f1013;color:#f6f5f1;display:inline-flex;align-items:center;justify-content:center;border:0;cursor:pointer;box-shadow:0 10px 24px -10px rgba(0,0,0,.75);transition:background .12s,transform .08s} .ds-disc:hover{background:#191b20} .ds-disc:active{transform:scale(.94)} .ds-disc:focus-visible{outline:3px solid #f6f5f1;outline-offset:3px}"
+    },
+    {
+      "name": "Engaged Disc",
+      "kind": "button",
+      "refersTo": "disc-engaged",
+      "description": "Signature move: the active or playing control fills warm white and its glyph turns black, with a short spring.",
+      "html": "<button class=\"ds-disc ds-disc-on\" aria-label=\"YouTube Music\"><svg width=\"26\" height=\"26\" viewBox=\"0 0 24 24\"><path d=\"M9 18a3 3 0 1 1-2-2.83V5l12-2v11a3 3 0 1 1-2-2.83V6.3L9 7.7z\" fill=\"currentColor\"/></svg></button>",
+      "css": ".ds-disc{width:56px;height:56px;border-radius:50%;background:#0f1013;color:#f6f5f1;display:inline-flex;align-items:center;justify-content:center;border:0;cursor:pointer;box-shadow:0 10px 24px -10px rgba(0,0,0,.75);transition:background .12s,transform .08s} .ds-disc:hover{background:#191b20} .ds-disc:active{transform:scale(.94)} .ds-disc:focus-visible{outline:3px solid #f6f5f1;outline-offset:3px} .ds-disc-on,.ds-disc-on:hover{background:#f6f5f1;color:#0f1013;animation:ds-engage .22s cubic-bezier(.2,1.4,.4,1)} @keyframes ds-engage{0%{transform:scale(.86)}100%{transform:scale(1)}}"
+    },
+    {
+      "name": "App Disc with Label",
+      "kind": "custom",
+      "refersTo": "app-disc",
+      "description": "Stack item: 58px disc, glyph in the app's one fixed hue, 13px bold label on an opaque pill.",
+      "html": "<div class=\"ds-app\"><button class=\"ds-app-disc\" aria-label=\"YouTube Music\"><span style=\"color:#ff6f9c\"><svg width=\"26\" height=\"26\" viewBox=\"0 0 24 24\"><path d=\"M9 18a3 3 0 1 1-2-2.83V5l12-2v11a3 3 0 1 1-2-2.83V6.3L9 7.7z\" fill=\"currentColor\"/></svg></span></button><span class=\"ds-app-l\">Müzik</span></div>",
+      "css": ".ds-app{display:inline-flex;flex-direction:column;align-items:center;gap:6px;width:84px;font-family:'Familjen Grotesk','Segoe UI',system-ui,sans-serif} .ds-app-disc{width:58px;height:58px;border-radius:50%;background:#0f1013;border:0;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 10px 24px -10px rgba(0,0,0,.75);transition:background .12s} .ds-app-disc span{display:flex} .ds-app-disc:hover{background:#191b20} .ds-app-disc:focus-visible{outline:3px solid #f6f5f1;outline-offset:3px} .ds-app-l{font-size:13px;font-weight:700;background:#0f1013;color:#f6f5f1;padding:2px 9px;border-radius:10px;line-height:1.35;white-space:nowrap}"
+    },
+    {
+      "name": "Pill Button",
+      "kind": "button",
+      "refersTo": "pill",
+      "description": "Secondary action: 46px full pill in Disc Raised.",
+      "html": "<button class=\"ds-pill\">Yapıştır</button>",
+      "css": ".ds-pill{height:46px;padding:0 20px;border-radius:23px;border:0;background:#191b20;color:#f6f5f1;font:600 17px 'Familjen Grotesk','Segoe UI',system-ui,sans-serif;cursor:pointer;transition:background .12s} .ds-pill:hover{background:#24272e} .ds-pill:focus-visible{outline:3px solid #f6f5f1;outline-offset:3px}"
+    },
+    {
+      "name": "Filled Pill Button",
+      "kind": "button",
+      "refersTo": "pill-fill",
+      "description": "The one primary action in a group: warm-white fill, black text.",
+      "html": "<button class=\"ds-pill ds-pill-fill\">Aç</button>",
+      "css": ".ds-pill{height:46px;padding:0 20px;border-radius:23px;border:0;background:#191b20;color:#f6f5f1;font:600 17px 'Familjen Grotesk','Segoe UI',system-ui,sans-serif;cursor:pointer;transition:background .12s} .ds-pill:hover{background:#24272e} .ds-pill:focus-visible{outline:3px solid #f6f5f1;outline-offset:3px} .ds-pill-fill{background:#f6f5f1;color:#0f1013} .ds-pill-fill:hover{background:#ffffff}"
+    },
+    {
+      "name": "Search Pill",
+      "kind": "input",
+      "refersTo": "search-pill",
+      "description": "Floating home search: magnifier, link-or-search input, paste pill and filled open pill.",
+      "html": "<div class=\"ds-search\"><svg width=\"22\" height=\"22\" viewBox=\"0 0 24 24\"><circle cx=\"10.5\" cy=\"10.5\" r=\"6.3\" stroke=\"currentColor\" stroke-width=\"2.4\" fill=\"none\"/><path d=\"M15.3 15.3 21 21\" stroke=\"currentColor\" stroke-width=\"2.6\" stroke-linecap=\"round\"/></svg><input placeholder=\"Link yapıştır ya da ara\"><button class=\"ds-pill\">Yapıştır</button><button class=\"ds-pill ds-pill-fill\">Aç</button></div>",
+      "css": ".ds-search{width:620px;max-width:100%;height:62px;border-radius:31px;background:#0f1013;box-shadow:0 10px 24px -10px rgba(0,0,0,.75);display:flex;align-items:center;gap:10px;padding:8px 8px 8px 22px;color:#9c998f;font-family:'Familjen Grotesk','Segoe UI',system-ui,sans-serif} .ds-search:focus-within{box-shadow:0 0 0 2px #f6f5f1,0 10px 24px -10px rgba(0,0,0,.75)} .ds-search input{flex:1;min-width:0;background:none;border:0;outline:0;font:400 20px 'Familjen Grotesk','Segoe UI',system-ui,sans-serif;color:#f6f5f1} .ds-search input::placeholder{color:#9c998f} .ds-pill{height:46px;padding:0 20px;border-radius:23px;border:0;background:#191b20;color:#f6f5f1;font:600 17px 'Familjen Grotesk','Segoe UI',system-ui,sans-serif;cursor:pointer;transition:background .12s} .ds-pill:hover{background:#24272e} .ds-pill:focus-visible{outline:3px solid #f6f5f1;outline-offset:3px} .ds-pill-fill{background:#f6f5f1;color:#0f1013} .ds-pill-fill:hover{background:#ffffff}"
+    },
+    {
+      "name": "Status Chip",
+      "kind": "chip",
+      "refersTo": "chip",
+      "description": "Conditional top-right chip for setup problems or a ready update; coral dot only when something is wrong.",
+      "html": "<div class=\"ds-chip\"><i></i><span>Kurulumda 2 sorun var</span></div> <div class=\"ds-chip ds-chip-act\"><span>3.1.7 hazır</span><button>Güncelle</button></div>",
+      "css": ".ds-chip{height:50px;border-radius:25px;background:#0f1013;color:#f6f5f1;box-shadow:0 10px 24px -10px rgba(0,0,0,.75);display:inline-flex;align-items:center;gap:10px;padding:6px 18px;font:600 16px 'Familjen Grotesk','Segoe UI',system-ui,sans-serif} .ds-chip-act{padding-right:6px} .ds-chip button{height:38px;padding:0 16px;border-radius:19px;border:0;background:#24272e;color:#f6f5f1;font:700 15px 'Familjen Grotesk','Segoe UI',system-ui,sans-serif;cursor:pointer} .ds-chip button:hover{background:#30343c} .ds-chip button:focus-visible{outline:3px solid #f6f5f1;outline-offset:3px} .ds-chip i{width:10px;height:10px;border-radius:5px;background:#ff7a59}"
+    },
+    {
+      "name": "Now-Playing Strip",
+      "kind": "card",
+      "refersTo": "now-playing",
+      "description": "80px pill: circular artwork, title, source-then-artist line, transport discs; play engages while audio plays.",
+      "html": "<div class=\"ds-np\"><div class=\"ds-np-art\"></div><div class=\"ds-np-tx\"><div class=\"ds-np-t\">Kilometre Taşları</div><div class=\"ds-np-a\"><b>YouTube Music</b>Örnek Sanatçı</div></div><div class=\"ds-np-ctr\"><button aria-label=\"Önceki\"><svg width=\"24\" height=\"24\" viewBox=\"0 0 24 24\"><path d=\"M6 5h2v14H6zM20 5v14L9 12z\" fill=\"currentColor\"/></svg></button><button class=\"ds-np-play\" aria-label=\"Oynat\"><svg width=\"26\" height=\"26\" viewBox=\"0 0 24 24\"><path d=\"M8 5v14l11-7z\" fill=\"currentColor\"/></svg></button><button aria-label=\"Sonraki\"><svg width=\"24\" height=\"24\" viewBox=\"0 0 24 24\"><path d=\"M16 5h2v14h-2zM4 5v14l11-7z\" fill=\"currentColor\"/></svg></button></div></div>",
+      "css": ".ds-np{height:80px;display:inline-flex;align-items:center;gap:14px;padding:8px 10px 8px 8px;border-radius:40px;background:#0f1013;color:#f6f5f1;box-shadow:0 10px 24px -10px rgba(0,0,0,.75);font-family:'Familjen Grotesk','Segoe UI',system-ui,sans-serif} .ds-np-art{width:64px;height:64px;border-radius:50%;background:#191b20;flex:none} .ds-np-t{font-size:19px;font-weight:700} .ds-np-a{font-size:15px;color:#9c998f} .ds-np-a b{color:#f6f5f1;font-weight:700;margin-right:8px} .ds-np-ctr{display:flex;gap:6px;align-items:center} .ds-np-ctr button{width:52px;height:52px;border-radius:50%;border:0;background:#191b20;color:#f6f5f1;display:flex;align-items:center;justify-content:center;cursor:pointer} .ds-np-ctr button:hover{background:#24272e} .ds-np-ctr button:focus-visible{outline:3px solid #f6f5f1;outline-offset:3px} .ds-np-ctr .ds-np-play,.ds-np-ctr .ds-np-play:hover{width:60px;height:60px;background:#f6f5f1;color:#0f1013}"
+    },
+    {
+      "name": "Left Rail",
+      "kind": "nav",
+      "refersTo": "rail",
+      "description": "96px pure-black rail: clock, date, navigation discs; the current view's disc is engaged, unavailable history is disabled.",
+      "html": "<nav class=\"ds-rail\"><div class=\"ds-clock\">00:37</div><div class=\"ds-date\">Pzt 23 Kas</div><button class=\"ds-rd ds-rd-on\" aria-label=\"Harita\"><svg width=\"26\" height=\"26\" viewBox=\"0 0 24 24\"><path d=\"M12 2.5a7 7 0 0 0-7 7c0 5 7 12.5 7 12.5s7-7.5 7-12.5a7 7 0 0 0-7-7zm0 9.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5z\" fill=\"currentColor\"/></svg></button><button class=\"ds-rd\" aria-label=\"Geri\"><svg width=\"26\" height=\"26\" viewBox=\"0 0 24 24\"><path d=\"M15 5l-7 7 7 7\" stroke=\"currentColor\" stroke-width=\"2.6\" fill=\"none\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></svg></button><button class=\"ds-rd\" disabled aria-label=\"İleri\"><svg width=\"26\" height=\"26\" viewBox=\"0 0 24 24\"><path d=\"M9 5l7 7-7 7\" stroke=\"currentColor\" stroke-width=\"2.6\" fill=\"none\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></svg></button></nav>",
+      "css": ".ds-rail{width:96px;background:#000;color:#f6f5f1;display:flex;flex-direction:column;align-items:center;gap:8px;padding:20px 0 18px;font-family:'Familjen Grotesk','Segoe UI',system-ui,sans-serif} .ds-clock{font-weight:700;font-size:32px;line-height:1;letter-spacing:-.02em;font-variant-numeric:tabular-nums} .ds-date{font-size:14px;color:#9c998f;margin:4px 0 10px} .ds-rd{width:56px;height:56px;border-radius:50%;border:0;background:#0f1013;color:#f6f5f1;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:background .12s} .ds-rd:hover{background:#191b20} .ds-rd:focus-visible{outline:3px solid #f6f5f1;outline-offset:3px} .ds-rd-on,.ds-rd-on:hover{background:#f6f5f1;color:#0f1013} .ds-rd[disabled]{background:transparent;color:#5a5d66;pointer-events:none}"
+    },
+    {
+      "name": "Settings Slider Row",
+      "kind": "input",
+      "refersTo": "settings-panel",
+      "description": "Label, warm-white filled track with ringed thumb, right-aligned tabular value, inside a 24px-corner Disc panel.",
+      "html": "<div class=\"ds-panel\"><h2>Görüntü</h2><label class=\"ds-srow\"><span>Parlaklık</span><input type=\"range\" min=\"5\" max=\"200\" value=\"110\" style=\"--p:55%\"><b>55%</b></label></div>",
+      "css": ".ds-panel{border-radius:24px;background:#0f1013;color:#f6f5f1;padding:24px 28px;display:flex;flex-direction:column;gap:18px;font-family:'Familjen Grotesk','Segoe UI',system-ui,sans-serif} .ds-panel h2{font-size:22px;font-weight:700;letter-spacing:-.01em;margin:0} .ds-srow{display:grid;grid-template-columns:170px 1fr 72px;align-items:center;gap:16px;font-size:18px} .ds-srow b{text-align:right;font-weight:700;font-variant-numeric:tabular-nums} .ds-srow input{-webkit-appearance:none;appearance:none;height:34px;background:transparent;cursor:pointer} .ds-srow input::-webkit-slider-runnable-track{height:6px;border-radius:3px;background:linear-gradient(90deg,#f6f5f1 0 var(--p,50%),#5c606b var(--p,50%) 100%)} .ds-srow input::-webkit-slider-thumb{-webkit-appearance:none;width:26px;height:26px;margin-top:-10px;border-radius:13px;background:#f6f5f1;border:5px solid #0f1013} .ds-srow input:focus-visible{outline:3px solid #f6f5f1;outline-offset:3px}"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Map Is the Screen",
+    "overview": "Home is not a launcher with a map tile in it. It is the game's live navigation, full bleed, with the app's controls floating at its edges the way a vertical-video feed floats its action rail and caption over the footage. The window paints a reserved key colour; the game plugin turns it transparent in the truck, so the route shows through almost everywhere and the app reads as a thin layer of opaque black discs and pills on top of it. The category's grid of tiles is refused entirely.\n\nEverything is near-black and warm white. Each app keeps exactly one fixed hue, and only on its glyph. The single interaction signal is the engaged fill: the control for what is active or playing fills warm white and its glyph turns black. There is no other accent colour. Hierarchy comes from scale contrast alone, one grotesque at three weights, a big tight headline against small bold labels. Density is low and fixed: one 1440×810 window that must also read when scaled into the Smart Dash at glance distance, at night included.\n\nRejected looks this system replaced: a navy ground with an amber accent in a tile grid, and a right-hand card above a bottom tile row.",
+    "keyCharacteristics": [
+      "The stage is the game: pure magenta in the window, transparent in the truck.",
+      "Opaque near-black discs and pills, soft-lifted, floating at the map's edges.",
+      "Warm white ink (never pure white over large areas).",
+      "One fixed hue per app, on the glyph only.",
+      "The engaged-disc fill is the only state colour.",
+      "Familjen Grotesk 400/600/700, hierarchy by scale.",
+      "Views change with a hard snap; no slides or fades."
+    ],
+    "rules": [
+      {
+        "name": "The Stage Key Rule",
+        "body": "Pure magenta paints the home stage and nothing else, ever. The plugin keys it to transparency, and only while the 1px Map Marker sits at the window's top-left pixel (shown only on the map view) does it also un-mix magenta blends into partial alpha. That un-mixing is why the bottom scrim, a black gradient over magenta in the window, becomes a real translucent scrim in the truck. Nothing may cover the top-left pixel on the map view.",
+        "section": "colors"
+      },
+      {
+        "name": "The One Fill Rule",
+        "body": "The engaged fill (warm white, black glyph) is the only state colour. At most one control per group carries it: the current view in the rail, the playing or last-opened source in the app stack, the play button while audio plays, the primary action in a pill pair.",
+        "section": "colors"
+      },
+      {
+        "name": "The Glyph-Only Hue Rule",
+        "body": "An app's hue lives on its glyph. Discs, labels and pills stay Disc Black regardless of app.",
+        "section": "colors"
+      },
+      {
+        "name": "The Scale-Only Rule",
+        "body": "Rank is shown by size and weight, never by a second family, colour, uppercase or letterspaced small caps.",
+        "section": "typography"
+      },
+      {
+        "name": "The Empty Middle Rule",
+        "body": "On home, controls hug the four edges; the centre of the stage belongs to the route.",
+        "section": "layout"
+      },
+      {
+        "name": "The Opaque Backing Rule",
+        "body": "Any label or control over the stage sits on an opaque Disc surface (pill, disc, strip). Only the caption greeting and its sub line ride directly on the stage, and only above the scrim.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "**Do** paint the home stage, and only the home stage, with `stage-key`, and show the 1px `map-marker` at the top-left pixel only on the map view.",
+      "**Do** put every control and label over the stage on an opaque Disc surface with the Lift shadow.",
+      "**Do** use the engaged fill (Warm Bone, Disc Black glyph) for the one active or playing control per group.",
+      "**Do** keep each app's hue on its glyph only.",
+      "**Do** keep the centre of the home stage empty and float controls at a 24px edge inset.",
+      "**Do** rank text by size and weight within Familjen Grotesk.",
+      "**Do** switch views with a hard snap."
+    ],
+    "donts": [
+      "**Don't** use pure magenta anywhere except the home stage, and don't cover the top-left pixel on the map view.",
+      "**Don't** introduce a second accent colour; status coral and mint are dots only.",
+      "**Don't** put large pure-white areas on screen; ink is warm white and fills are control-sized.",
+      "**Don't** arrange apps as a tile grid, a right-column card or a bottom tile row, and don't use a navy ground or amber accent.",
+      "**Don't** slide or fade between views.",
+      "**Don't** change the 1440×810 window size or its title."
+    ]
+  }
+}

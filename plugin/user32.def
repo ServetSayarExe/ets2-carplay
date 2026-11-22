@@ -9,3 +9,4 @@ GetClientRect
 PrintWindow
 GetDC
 ReleaseDC
+GetForegroundWindow

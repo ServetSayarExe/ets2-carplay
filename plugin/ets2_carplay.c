@@ -8,10 +8,14 @@
  *    guncellenebilir hale getirir.
  *  - Ayri bir is parcaciginda "ETS2 CarPlay" penceresinin goruntusunu alir,
  *    her karede o dokuya yazar.
- *  - Saf macenta (FF00FF) pikseller seffaf olur -> altta oyunun haritasi gorunur.
- *  - Sol ust piksel rgb(P, 0x5A, 0xA5) ise P/255 parlaklik olarak uygulanir.
+ *  - Uygulama harita gorunumundeyken sol ust pikseli 13 37 C4 isaretiyle boyar.
+ *    Yalnizca o zaman macenta (FF00FF) seffaf olur -> altta oyunun haritasi gorunur;
+ *    kenarlardaki macenta karisimi alfa olarak ayrilir (pembe hale kalmaz).
+ *    Diger gorunumlerde (video, site) hicbir piksel seffaflastirilmaz.
+ *  - Parlaklik, beyaz yumusatma, fps ve kenar bosluklari
+ *    Belgeler\Euro Truck Simulator 2\ets2_carplay.cfg dosyasindan saniyede bir okunur.
  *
- * Menu yok, ayar yok. SDK, CRT ya da harici kutuphane kullanmaz.
+ * SDK, CRT ya da harici kutuphane kullanmaz.
  */
 
 typedef unsigned char      u8;
@@ -66,10 +70,15 @@ __declspec(dllimport) u32    WINAPI GetEnvironmentVariableA(const char*, char*, 
 __declspec(dllimport) u64    WINAPI GetTickCount64(void);
 __declspec(dllimport) void   WINAPI GetLocalTime(SYSTEMTIME*);
 __declspec(dllimport) u32    WINAPI SetFilePointer(HANDLE, i32, i32*, u32);
+__declspec(dllimport) HANDLE WINAPI CreateWaitableTimerExW(void*, const wchar*, u32, u32);
+__declspec(dllimport) BOOL   WINAPI SetWaitableTimer(HANDLE, const i64*, i32, void*, void*, BOOL);
+__declspec(dllimport) BOOL   WINAPI QueryPerformanceCounter(i64*);
+__declspec(dllimport) BOOL   WINAPI QueryPerformanceFrequency(i64*);
 
 __declspec(dllimport) HWND WINAPI CreateWindowExW(u32, const wchar*, const wchar*, u32, i32, i32, i32, i32, HWND, void*, void*, void*);
 __declspec(dllimport) BOOL WINAPI DestroyWindow(HWND);
 __declspec(dllimport) HWND WINAPI FindWindowW(const wchar*, const wchar*);
+__declspec(dllimport) HWND WINAPI GetForegroundWindow(void);
 __declspec(dllimport) BOOL WINAPI IsWindowVisible(HWND);
 __declspec(dllimport) BOOL WINAPI IsIconic(HWND);
 __declspec(dllimport) BOOL WINAPI GetClientRect(HWND, RECT*);
@@ -147,6 +156,9 @@ static PFN_CreateTex2D o_CreateTex2D;
 static IUnk*          g_ctx;             /* immediate context */
 static IUnk* volatile g_tex;             /* our stream texture (we hold a ref) */
 static volatile i32   g_texRGBA;         /* 1 = R8G8B8A8 order, 0 = B8G8R8A8 */
+static IUnk*          g_alt;             /* yedek aday doku (ref tutuyoruz), g_cs altinda */
+static i32            g_altRGBA;
+static i32            g_csInit;
 static CRITICAL_SECTION g_cs;
 static u8*            g_front;           /* TEX_W*TEX_H*4, ready for upload */
 static u8*            g_back;
@@ -180,7 +192,7 @@ static void cfg_init(void) {
     int i = 0; while (tail[i]) { g_cfgPath[n + i] = tail[i]; i++; } g_cfgPath[n + i] = 0;
 }
 static void lg(const char* msg);
-static volatile i32 g_inset[4] = { 2, 2, 0, 4 }; /* sol, ust, sag, alt (yuzde) */
+static volatile i32 g_inset[4] = { 2, 2, 2, 3 }; /* sol, ust, sag, alt (yuzde) */
 static int kv_match(const char* b, u32 i, u32 r, const char* k) {
     u32 j = 0; while (k[j]) { if (i + j >= r || b[i + j] != k[j]) return 0; j++; } return (int)j;
 }
@@ -216,9 +228,16 @@ static int cfg_read(int* dim) {
 typedef struct { u32 cb; wchar *r, *desk, *title; u32 x, y, xs, ys, xc, yc, fill, flags; u16 show, cbr2; u8* r2; HANDLE in, out, err; } STARTUPINFOW_;
 typedef struct { HANDLE proc, thr; u32 pid, tid; } PROCINFO_;
 __declspec(dllimport) BOOL WINAPI CreateProcessW(const wchar*, wchar*, void*, void*, BOOL, u32, void*, const wchar*, STARTUPINFOW_*, PROCINFO_*);
-static void launch_app(void) {
+/* Uygulama penceresi: once Electron pencere sinifiyla ara (ayni baslikli baska pencere karismasin),
+   bulunamazsa eski davranis gibi yalnizca baslikla. */
+static HWND find_app(void) {
     static const wchar title[] = { 'E','T','S','2',' ','C','a','r','P','l','a','y',0 };
-    if (FindWindowW(NULL, title)) return; /* zaten acik */
+    static const wchar cls[] = { 'C','h','r','o','m','e','_','W','i','d','g','e','t','W','i','n','_','1',0 };
+    HWND h = FindWindowW(cls, title);
+    return h ? h : FindWindowW(NULL, title);
+}
+static void launch_app(void) {
+    if (find_app()) return; /* zaten acik */
     wchar p[600]; u32 n = GetEnvironmentVariableW((const wchar*)L"LOCALAPPDATA", p, 400);
     if (!n || n > 400) return;
     const wchar* tail = (const wchar*)L"\\Programs\\ets2-carplay\\ETS2 CarPlay.exe";
@@ -257,6 +276,35 @@ static void lghex(const char* pre, u64 v) {
     for (int i = 15; i >= 0; i--) { int d = (int)((v >> (i * 4)) & 15); b[n++] = (char)(d < 10 ? '0' + d : 'a' + d - 10); }
     b[n] = 0; lg(b);
 }
+static void lgnum(const char* pre, u64 v) {
+    char b[96]; int n = 0; while (pre[n] && n < 70) { b[n] = pre[n]; n++; }
+    char t[24]; int m = 0; do { t[m++] = (char)('0' + v % 10); v /= 10; } while (v);
+    while (m) b[n++] = t[--m];
+    b[n] = 0; lg(b);
+}
+
+/* ---------------- zamanlama ----------------
+   Sleep() Windows'ta varsayilan 15,6 ms adimla calisir: Sleep(16) ~31 ms surer ve 60 fps
+   pratikte ~30'da kalir. Yuksek cozunurluklu bekleme zamanlayicisi + QueryPerformanceCounter. */
+static HANDLE g_timer;
+static i64    g_qpf;
+static i64 now_us(void) {
+    i64 c; QueryPerformanceCounter(&c);
+    return (c / g_qpf) * 1000000 + (c % g_qpf) * 1000000 / g_qpf;
+}
+static void timing_init(void) {
+    if (!QueryPerformanceFrequency(&g_qpf) || g_qpf <= 0) g_qpf = 1000;
+    g_timer = CreateWaitableTimerExW(NULL, NULL, 0x2 /*HIGH_RESOLUTION*/, 0x1F0003 /*TIMER_ALL_ACCESS*/);
+    if (!g_timer) { g_timer = CreateWaitableTimerExW(NULL, NULL, 0, 0x1F0003); lg("yuksek cozunurluklu zamanlayici yok, normal zamanlayici"); }
+}
+static void sleep_us(i64 us) {
+    if (us <= 0) return;
+    if (g_timer) {
+        i64 due = -us * 10; /* 100 ns birimi, eksi = goreli */
+        if (SetWaitableTimer(g_timer, &due, 0, NULL, NULL, 0)) { WaitForSingleObject(g_timer, 0xFFFFFFFFu); return; }
+    }
+    Sleep((u32)((us + 999) / 1000));
+}
 
 static int patch_vt(void** slot, void* fn, void** orig) {
     u32 old;
@@ -281,12 +329,16 @@ static void log_tex(const char* pre, const D3D11_TEXTURE2D_DESC* d, const D3D11_
     }
     b[n] = 0; lg(b);
 }
-static int is_our_texture(const D3D11_TEXTURE2D_DESC* d, const D3D11_SUBRESOURCE_DATA* init, int* rgba) {
+/* 1: eslesti. *verified = 1 ise isaret pikseli (33 22 11) ilk veride goruldu;
+   0 ise oyun dokuyu verisiz olusturdu (1.62'de boyle), yalnizca boyut+format+bayraklar eslesti. */
+static int is_our_texture(const D3D11_TEXTURE2D_DESC* d, const D3D11_SUBRESOURCE_DATA* init, int* rgba, int* verified) {
+    *verified = 0;
     if (!d) return 0;
     if (d->Width != TEX_W || d->Height != TEX_H) return 0;
     log_tex("1440x810 doku:", d, init);
     if (d->ArraySize != 1 || d->SampleDesc.Count > 1) return 0;
-    if (d->BindFlags & ~0x8u) return 0;          /* sadece shader resource (render target degil) */
+    if (d->BindFlags != 0x8u) return 0;          /* sadece shader resource (render target degil) */
+    if (d->MipLevels > 1) return 0;              /* modun DDS'i tek seviye */
     u32 f = d->Format;
     /* 87 B8G8R8A8_UNORM, 91 *_SRGB, 88 B8G8R8X8, 28 R8G8B8A8_UNORM, 29 *_SRGB */
     if (f == 87 || f == 91 || f == 88) *rgba = 0;
@@ -294,15 +346,24 @@ static int is_our_texture(const D3D11_TEXTURE2D_DESC* d, const D3D11_SUBRESOURCE
     else return 0;
     if (init && init->pSysMem) {
         const u8* p = (const u8*)init->pSysMem;
-        if (*rgba) return p[0] == 0x33 && p[1] == 0x22 && p[2] == 0x11;
-        return p[0] == 0x11 && p[1] == 0x22 && p[2] == 0x33;
+        int ok = *rgba ? (p[0] == 0x33 && p[1] == 0x22 && p[2] == 0x11) : (p[0] == 0x11 && p[1] == 0x22 && p[2] == 0x33);
+        *verified = ok;
+        return ok;
     }
-    return 1; /* veri sonradan yukleniyor: boyut+format yeterli */
+    return 1; /* veri sonradan yukleniyor: boyut+format+bayraklar */
+}
+
+/* Bir dokunun bizim disimizda da tutulup tutulmadigi: AddRef yeni sayiyi dondurur.
+   Sayi 2 ise (bizim ref + bu AddRef) oyun dokuyu birakmis demektir. */
+static u32 tex_refs(IUnk* t) {
+    u32 c = ((PFN_AddRef)t->vt[1])(t);
+    ((PFN_Release)t->vt[VT_RELEASE])(t);
+    return c;
 }
 
 static HRESULT h_CreateTex2D(IUnk* dev, const D3D11_TEXTURE2D_DESC* desc, const D3D11_SUBRESOURCE_DATA* init, IUnk** out) {
-    int rgba = 0;
-    if (out && is_our_texture(desc, init, &rgba)) {
+    int rgba = 0, verified = 0;
+    if (out && is_our_texture(desc, init, &rgba, &verified)) {
         D3D11_TEXTURE2D_DESC d = *desc;
         d.Usage = 0;            /* D3D11_USAGE_DEFAULT (oyun IMMUTABLE ister) */
         d.CPUAccessFlags = 0;
@@ -310,12 +371,25 @@ static HRESULT h_CreateTex2D(IUnk* dev, const D3D11_TEXTURE2D_DESC* desc, const 
         HRESULT hr = o_CreateTex2D(dev, &d, init, out);
         lghex("bizim doku olusturuldu hr=", (u64)(u32)hr);
         if (hr >= 0 && *out) {
-            ((PFN_AddRef)(*out)->vt[1])(*out);
-            IUnk* old = (IUnk*)__atomic_exchange_n((void**)&g_tex, (void*)*out, __ATOMIC_SEQ_CST);
-            g_texRGBA = rgba;
-            g_uploaded = g_seq - 1; /* yeniden yukle */
-            g_texFound = 1;
-            if (old) ((PFN_Release)old->vt[VT_RELEASE])(old);
+            EnterCriticalSection(&g_cs);
+            IUnk* old = g_tex;
+            /* Elimizdeki doku oyunda hala kullaniliyorsa ve yenisi isaretle dogrulanmadiysa,
+               yeni gelen baska bir 1440x810 doku olabilir: ona dokunma. */
+            if (old && !verified && tex_refs(old) > 2) {
+                /* Yedekte tut: mevcut doku birakilirsa (Smart Dash yeniden yuklendi) bu devralir. */
+                ((PFN_AddRef)(*out)->vt[1])(*out);
+                if (g_alt) ((PFN_Release)g_alt->vt[VT_RELEASE])(g_alt);
+                g_alt = *out; g_altRGBA = rgba;
+                lg("ikinci 1440x810 doku: mevcut doku hala kullanimda, yenisi yedekte");
+            } else {
+                ((PFN_AddRef)(*out)->vt[1])(*out);
+                g_tex = *out;
+                g_texRGBA = rgba;
+                g_uploaded = g_seq - 1; /* yeniden yukle */
+                g_texFound = 1;
+                if (old) ((PFN_Release)old->vt[VT_RELEASE])(old);
+            }
+            LeaveCriticalSection(&g_cs);
         }
         return hr;
     }
@@ -337,14 +411,28 @@ static void on_present(IUnk* sc) {
         return;
     }
     if (g_texFound == 1) { g_texFound = 2; lg("doku bulundu, goruntu basiliyor"); }
+    if (!g_tex || !g_ctx) return;
+    static u32 frames;
+    /* Doku okunup yuklenirken baska is parcacigi onu birakamasin: hepsi kilit altinda. */
+    EnterCriticalSection(&g_cs);
     IUnk* tex = g_tex;
-    if (tex && g_ctx && g_seq != g_uploaded) {
-        EnterCriticalSection(&g_cs);
+    if (tex && ++frames >= 120) {
+        frames = 0;
+        if (g_alt && tex_refs(g_alt) <= 2) { ((PFN_Release)g_alt->vt[VT_RELEASE])(g_alt); g_alt = NULL; }
+        if (tex_refs(tex) <= 2) { /* oyun Smart Dash ekranini kapatti: dokuyu birak */
+            ((PFN_Release)tex->vt[VT_RELEASE])(tex);
+            tex = g_alt; g_alt = NULL;
+            g_tex = tex;
+            if (tex) { g_texRGBA = g_altRGBA; g_uploaded = g_seq - 1; lg("doku birakildi, yedekteki doku devraldi"); }
+            else { g_texFound = 0; lg("doku oyun tarafindan birakildi"); }
+        }
+    }
+    if (tex && g_seq != g_uploaded) {
         u32 s = g_seq;
         ((PFN_UpdateSub)g_ctx->vt[VT_CTX_UPDATESUB])(g_ctx, tex, 0, NULL, g_front, TEX_W * 4, 0);
         g_uploaded = s;
-        LeaveCriticalSection(&g_cs);
     }
+    LeaveCriticalSection(&g_cs);
 }
 static volatile i32 g_p0, g_p1;
 static HRESULT h_Present(IUnk* sc, u32 sync, u32 flags) { if (!g_p0) { g_p0 = 1; lg("Present cagrildi"); } on_present(sc); return o_Present(sc, sync, flags); }
@@ -388,7 +476,6 @@ static void publish(void) {
 
 static u32 WINAPI capture_thread(void* arg) {
     (void)arg;
-    static const wchar title[] = { 'E','T','S','2',' ','C','a','r','P','l','a','y',0 };
     HDC capDC = CreateCompatibleDC(NULL), dstDC = CreateCompatibleDC(NULL);
     HBITMAP capBmp = NULL, dstBmp = NULL; u8 *capBits = NULL, *dstBits = NULL;
     i32 capW = 0, capH = 0;
@@ -401,10 +488,12 @@ static u32 WINAPI capture_thread(void* arg) {
     int missing = 0, blankSent = 0, lastState = -1;
     u64 tStart = GetTickCount64(), tCfg = 0; int warned = 0, launched = 0;
 
+    int lastMap = -1, lastFocus = -1;
     while (g_run) {
         u64 t0 = GetTickCount64();
+        i64 f0 = now_us();
         if (!warned && t0 - tStart > 20000) { warned = 1; lg(g_presentSeen ? "durum: Present tamam" : "durum: 20 sn'dir Present hic cagrilmadi (kanca tutmadi)"); lg(g_tex ? "durum: doku var" : "durum: doku henuz yok"); }
-        HWND h = FindWindowW(NULL, title);
+        HWND h = find_app();
         int usable = h && IsWindowVisible(h) && !IsIconic(h);
         RECT rc = { 0, 0, 0, 0 };
         if (usable) { GetClientRect(h, &rc); if (rc.right <= 0 || rc.bottom <= 0) usable = 0; }
@@ -429,9 +518,13 @@ static u32 WINAPI capture_thread(void* arg) {
             capW = rc.right; capH = rc.bottom;
         }
         if (!PrintWindow(h, capDC, 3 /*PW_CLIENTONLY|PW_RENDERFULLCONTENT*/)) { Sleep(100); continue; }
+        GdiFlush();
+        /* Harita isareti (olceklemeden once, ham goruntuden): sol ust piksel 13 37 C4 */
+        int mapMode = capBits && capBits[0] == 0xC4 && capBits[1] == 0x37 && capBits[2] == 0x13;
+        if (mapMode != lastMap) { lg(mapMode ? "harita gorunumu: macenta seffaf" : "uygulama gorunumu: seffaflik kapali"); lastMap = mapMode; }
         const u8* src;
         i32 il = g_inset[0] * TEX_W / 100, it = g_inset[1] * TEX_H / 100, ir = g_inset[2] * TEX_W / 100, ib = g_inset[3] * TEX_H / 100;
-        if (capW == TEX_W && capH == TEX_H && !il && !it && !ir && !ib) { GdiFlush(); src = capBits; }
+        if (capW == TEX_W && capH == TEX_H && !il && !it && !ir && !ib) { src = capBits; }
         else {
             if (dstBits) memset(dstBits, 0, (u64)TEX_W * TEX_H * 4); /* kenarlar siyah */
             StretchBlt(dstDC, il, it, TEX_W - il - ir, TEX_H - it - ib, capDC, 0, 0, capW, capH, 0x00CC0020 /*SRCCOPY*/);
@@ -439,37 +532,76 @@ static u32 WINAPI capture_thread(void* arg) {
         }
         if (!src || !g_back) { Sleep(100); continue; }
 
-        /* sol ust piksel: rgb(P, 0x5A, 0xA5) -> parlaklik P */
-        /* parlaklik: ayar dosyasindan (saniyede bir) */
+        /* ayarlar: dosyadan saniyede bir */
         if (t0 - tCfg > 1000) {
             tCfg = t0;
-            int v = -1; i32 oi[4] = { g_inset[0], g_inset[1], g_inset[2], g_inset[3] };
+            int v = -1; i32 oi[4] = { g_inset[0], g_inset[1], g_inset[2], g_inset[3] }; i32 ofps = g_fps;
             cfg_read(&v);
             if (v > 0) {
                 u32 nd = (u32)(v * 256 / 100);
-                if (nd != g_dim) { g_dim = nd; lghex("parlaklik ayari (yuzde) = ", (u64)v); }
+                if (nd != g_dim) { g_dim = nd; lgnum("parlaklik ayari (yuzde) = ", (u64)v); }
             }
-            if (oi[0] != g_inset[0] || oi[1] != g_inset[1] || oi[2] != g_inset[2] || oi[3] != g_inset[3])
-                lghex("kenar bosluklari (sol/ust/sag/alt) = ", ((u64)g_inset[0] << 24) | ((u64)g_inset[1] << 16) | ((u64)g_inset[2] << 8) | (u64)g_inset[3]);
+            if (ofps != g_fps) lgnum("akicilik (fps) = ", (u64)g_fps);
+            if (oi[0] != g_inset[0] || oi[1] != g_inset[1] || oi[2] != g_inset[2] || oi[3] != g_inset[3]) {
+                lgnum("kenar bosluklari: sol ", (u64)g_inset[0]); lgnum("  ust ", (u64)g_inset[1]);
+                lgnum("  sag ", (u64)g_inset[2]); lgnum("  alt ", (u64)g_inset[3]);
+            }
         }
         u32 dim = g_dim;
         if (dim != g_lutDim || (u32)g_white != g_lutWhite) build_lut(dim, g_white);
         int rgba = g_texRGBA;
         const u8* s = src; u8* d = g_back; u32 n = TEX_W * TEX_H;
+        /* Kenar yumusatma: oyunun parlama (bloom) efekti cok parlak kenar piksellerini Smart Dash'in siyah
+           cercevesine tasiyor (cerceve videonun rengini aliyor). Goruntunun son FADE pikseli siyaha dogru iner. */
+        enum { FADE = 14 };
+        int fadeOn = !mapMode && (il || it || ir || ib);
+        i32 fx0 = il, fx1 = TEX_W - ir - 1, fy0 = it, fy1 = TEX_H - ib - 1;
+        i32 px = 0, py = 0;
         for (u32 i = 0; i < n; i++, s += 4, d += 4) {
-            u8 b = s[0], g = s[1], r = s[2];
-            if (r >= 250 && g <= 6 && b >= 250) { d[0] = d[1] = d[2] = d[3] = 0; continue; }
+            i32 cx = px, cy = py; if (++px == TEX_W) { px = 0; py++; }
+            u32 b = s[0], g = s[1], r = s[2], a = 255;
+            if (mapMode) {
+                /* Koyu anahtar #100020 (3.1.6+): PC penceresinde siyah gorunur, oyunda seffaf olur.
+                   Ustune binen siyah perde (alfa o) pikseli (16,0,32)*(1-o) yapar: g=0 ve r ~ b/2 kalir,
+                   b'den alfa geri cozulur (b=32 tam seffaf, b=0 tam siyah). */
+                if (g <= 1 && b <= 34 && (i32)(2 * r) - (i32)b <= 3 && (i32)b - (i32)(2 * r) <= 3) {
+                    if (b >= 30) { d[0] = d[1] = d[2] = d[3] = 0; continue; }
+                    a = 255 - b * 255 / 32; r = g = b = 0;
+                    goto write_px;
+                }
+                /* Macenta payi: A = min(r,b) - g. Olcekleme macentayi komsu piksellerle karistirir;
+                   karisimi alfa olarak ayirip rengi geri cozuyoruz (pembe hale kalmaz).
+                   A < 48: macenta degil (ornegin pembe ikonlar), dokunma. */
+                i32 mn = (i32)(r < b ? r : b), A = mn - (i32)g;
+                if (A >= 240) { d[0] = d[1] = d[2] = d[3] = 0; continue; }
+                if (A >= 48) {
+                    u32 al = (u32)(255 - A);
+                    r = (r - (u32)A) * 255 / al; g = g * 255 / al; b = (b - (u32)A) * 255 / al;
+                    a = al;
+                }
+            }
             r = g_lut[r]; g = g_lut[g]; b = g_lut[b];
-            if (rgba) { d[0] = r; d[1] = g; d[2] = b; } else { d[0] = b; d[1] = g; d[2] = r; }
-            d[3] = 255;
+            if (fadeOn) {
+                i32 e = cx - fx0, t2 = fx1 - cx; if (t2 < e) e = t2;
+                t2 = cy - fy0; if (t2 < e) e = t2; t2 = fy1 - cy; if (t2 < e) e = t2;
+                if (e < 0) { r = g = b = 0; }
+                else if (e < FADE) { u32 f = (u32)(e + 1); r = r * f / (FADE + 1); g = g * f / (FADE + 1); b = b * f / (FADE + 1); }
+            }
+        write_px:
+            if (rgba) { d[0] = (u8)r; d[1] = (u8)g; d[2] = (u8)b; } else { d[0] = (u8)b; d[1] = (u8)g; d[2] = (u8)r; }
+            d[3] = (u8)a;
         }
         /* isaret pikselini komsusuyla doldur */
         g_back[0] = g_back[4]; g_back[1] = g_back[5]; g_back[2] = g_back[6]; g_back[3] = g_back[7];
         publish();
 
-        u64 dt = GetTickCount64() - t0;
-        u32 frame = 1000u / (u32)g_fps;
-        if (dt < frame) Sleep((u32)(frame - dt));
+        /* Uygulama ondeyken (oyuncu Alt+Tab ile icinde) kamyon ekrani gorulmuyor: yakalamayi 15 fps'e indir.
+           PrintWindow her karede uygulamanin arayuz is parcacigini bekletir; 60 fps'te menuler takilir. */
+        int focused = GetForegroundWindow() == h;
+        if (focused != lastFocus) { lg(focused ? "uygulama onde: yakalama 15 fps" : "oyun onde: yakalama tam hiz"); lastFocus = focused; }
+        i32 fps = focused && g_fps > 15 ? 15 : g_fps;
+        i64 frame = 1000000 / (i64)fps;
+        sleep_us(frame - (now_us() - f0));
     }
     if (capBmp) DeleteObject(capBmp);
     if (dstBmp) DeleteObject(dstBmp);
@@ -488,7 +620,8 @@ __declspec(dllexport) i32 scs_telemetry_init(u32 version, const void* params) {
     launch_app(); /* oyunla birlikte hemen ac */
     if (g_scslog) g_scslog(0, "[ETS2 CarPlay] eklenti basliyor");
 
-    InitializeCriticalSection(&g_cs);
+    InitializeCriticalSection(&g_cs); g_csInit = 1;
+    timing_init();
     u64 sz = (u64)TEX_W * TEX_H * 4;
     g_front = (u8*)VirtualAlloc(NULL, sz, 0x3000, 0x04);
     g_back  = (u8*)VirtualAlloc(NULL, sz, 0x3000, 0x04);
@@ -511,13 +644,30 @@ __declspec(dllexport) i32 scs_telemetry_init(u32 version, const void* params) {
 
 __declspec(dllexport) void scs_telemetry_shutdown(void) {
     g_run = 0;
-    if (g_thread) { WaitForSingleObject(g_thread, 2000); CloseHandle(g_thread); g_thread = NULL; }
+    int stopped = 1;
+    if (g_thread) {
+        /* Yakalama dongusu en fazla ~0,5 sn uyur; PrintWindow takilan bir pencerede uzayabilir. */
+        if (WaitForSingleObject(g_thread, 5000) != 0) { stopped = 0; lg("UYARI: yakalama is parcacigi 5 sn'de durmadi"); }
+        CloseHandle(g_thread); g_thread = NULL;
+    }
+    /* Once kancalari geri al: bundan sonra oyun bizim koda girmez. */
     if (g_scVt && o_Present)  patch_vt(&g_scVt[VT_SC_PRESENT], (void*)o_Present, NULL);
     if (g_scVt && o_Present1) patch_vt(&g_scVt[VT_SC_PRESENT1], (void*)o_Present1, NULL);
     if (g_devVt && o_CreateTex2D) patch_vt(&g_devVt[VT_DEV_CREATETEX2D], (void*)o_CreateTex2D, NULL);
-    IUnk* t = (IUnk*)__atomic_exchange_n((void**)&g_tex, NULL, __ATOMIC_SEQ_CST);
+    Sleep(100); /* o anda kancanin icinde olan bir Present cagrisi bitsin */
+    if (g_csInit) EnterCriticalSection(&g_cs);
+    IUnk* t = g_tex; g_tex = NULL;
     if (t) ((PFN_Release)t->vt[VT_RELEASE])(t);
+    if (g_alt) { ((PFN_Release)g_alt->vt[VT_RELEASE])(g_alt); g_alt = NULL; }
     if (g_ctx) { ((PFN_Release)g_ctx->vt[VT_RELEASE])(g_ctx); g_ctx = NULL; }
+    if (g_csInit) LeaveCriticalSection(&g_cs);
+    if (stopped) {
+        /* Is parcacigi durduysa tamponlari ve kilidi serbest birak; durmadiysa dokunma (hala kullaniyor olabilir). */
+        if (g_front) { VirtualFree(g_front, 0, 0x8000 /*MEM_RELEASE*/); g_front = NULL; }
+        if (g_back)  { VirtualFree(g_back, 0, 0x8000); g_back = NULL; }
+        if (g_timer) { CloseHandle(g_timer); g_timer = NULL; }
+        if (g_csInit) { DeleteCriticalSection(&g_cs); g_csInit = 0; }
+    }
     lg("eklenti kapatildi");
     if (g_logf) { CloseHandle(g_logf); g_logf = NULL; }
 }

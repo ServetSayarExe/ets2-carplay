@@ -4,311 +4,309 @@
 <meta charset="utf-8">
 <title>ETS2 CarPlay</title>
 <style>
-  /* Gece kabini: koyu lacivert zemin, gosterge amberi tek vurgu, Bahnschrift (DIN) yazi.
-     Kamyon ekraninda parlama olmasin diye buyuk beyaz yuzey yok, yazi saf beyaz degil. */
+  /* Ana ekran oyunun kendi haritasidir: sahne saf macenta, kamyonda seffaf olur.
+     Kontroller haritanin kenarlarinda yuzer (dikey video akisinin rayi ve alt yazisi gibi).
+     Etkin ya da calan kontrol sicak beyazla dolar; baska vurgu rengi yok. */
+  @font-face{font-family:"Familjen Grotesk";font-weight:400 700;font-display:swap;
+    src:url("assets/fonts/familjen-grotesk-latin.woff2") format("woff2");
+    unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+  @font-face{font-family:"Familjen Grotesk";font-weight:400 700;font-display:swap;
+    src:url("assets/fonts/familjen-grotesk-latin-ext.woff2") format("woff2");
+    unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+1E00-1E9F,U+1EF2-1EFF,U+20A0-20AB,U+20AD-20C4,U+2C60-2C7F,U+A720-A7FF}
+
   :root{
-    --bg:#08101c; --panel:#101a2a; --panel2:#16233a; --line:#1f2d45;
-    --text:#e3e8ef; --muted:#8492a8; --faint:#5a6880;
-    --amber:#f0a43a; --amber-ink:#1a1206; --ok:#45c486; --warn:#e8833a;
-    --yt:#ff5a50; --ytm:#ff6b94; --g:#7aaeff; --kick:#53fc18; --news:#5fd0c0; --radio:#86d886; --last:#b7c2d3;
-    --r-lg:28px; --r-md:20px; --r-sm:14px;
-    --font:"Bahnschrift","DIN Alternate","Segoe UI",system-ui,sans-serif;
+    --stage:#100020;               /* ayrilmis anahtar: PC'de siyah gorunur, eklenti oyunda seffaf yapar */
+    --ink:#f6f5f1; --ink-2:#c9c6bd; --ink-3:#9c998f;
+    --disc:#0f1013; --disc-2:#191b20; --disc-3:#24272e; --page:#0b0c0e;
+    --on:#f6f5f1; --on-ink:#0f1013;
+    --bad:#ff7a59; --good:#7ee2a0;
+    --nf:#ff4b55; --pv:#3fbcff; --ax:#b896ff; --yt:#ff4f45; --ytm:#ff6f9c; --g:#79acff; --radio:#6ddf7c; --kick:#5ff22c; --news:#4fd6c8; --last:#d8d4ca;
+    --font:"Familjen Grotesk","Segoe UI",system-ui,sans-serif;
+    --lift:0 10px 24px -10px rgba(0,0,0,.75);
   }
   *{box-sizing:border-box;margin:0;padding:0}
-  html,body{width:1440px;height:810px;overflow:hidden;background:var(--bg);color:var(--text);
-    font-family:var(--font);user-select:none;-webkit-font-smoothing:antialiased}
-  button{font-family:inherit;color:inherit;border:0;background:none;cursor:pointer;text-align:left}
-  button:focus-visible,input:focus-visible{outline:3px solid var(--amber);outline-offset:3px}
+  html,body{width:1440px;height:810px;overflow:hidden;background:var(--page);color:var(--ink);
+    font-family:var(--font);font-size:18px;line-height:1.35;user-select:none;-webkit-font-smoothing:antialiased;caret-color:var(--ink)}
+  ::selection{background:var(--on);color:var(--on-ink)}
+  button{font:inherit;color:inherit;border:0;background:none;cursor:pointer;text-align:left}
+  input{font:inherit;color:var(--ink)}
+  button:focus-visible,input:focus-visible{outline:3px solid var(--ink);outline-offset:3px}
   svg{display:block;flex:none}
   @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 
+  /* disk: tek kontrol dili. Etkinken sicak beyazla dolar, glif siyaha doner (imza hareket) */
+  .disc{--hole:var(--disc);width:56px;height:56px;border-radius:50%;background:var(--disc);display:flex;align-items:center;justify-content:center;
+    color:var(--ink);box-shadow:var(--lift);transition:background .12s,transform .08s;flex:none}
+  .disc:hover{background:var(--disc-2);--hole:var(--disc-2)}
+  .disc:active{transform:scale(.94)}
+  .disc.on{background:var(--on);--hole:var(--on);color:var(--on-ink);animation:engage .22s cubic-bezier(.2,1.4,.4,1)}
+  @keyframes engage{0%{transform:scale(.86)}100%{transform:scale(1)}}
+  .disc.on svg{color:var(--on-ink)!important}
+  .disc[disabled]{background:transparent;box-shadow:none;color:#5a5d66;pointer-events:none}
+
   /* ---------- sol ray ---------- */
-  .rail{position:absolute;left:0;top:0;width:120px;height:810px;background:#0b1422;
-    display:flex;flex-direction:column;align-items:center;padding:20px 0 18px;gap:10px;
-    border-right:1px solid var(--line);z-index:5}
-  .clock{font-size:36px;font-weight:600;line-height:1;font-variant-numeric:tabular-nums;-webkit-app-region:drag}
-  .date{font-size:15px;color:var(--muted);margin:2px 0 10px;-webkit-app-region:drag}
-  .nav,.rapp{position:relative;width:88px;height:64px;border-radius:var(--r-sm);background:var(--panel);
-    display:flex;align-items:center;justify-content:center;color:var(--text);transition:background .12s,transform .08s}
-  .nav:hover,.rapp:hover{background:var(--panel2)}
-  .nav:active,.rapp:active{transform:scale(.95)}
-  .nav[disabled]{color:var(--faint);background:transparent;pointer-events:none}
-  .nav.on,.rapp.on{color:var(--amber);background:var(--panel2)}
-  .nav.on::before,.rapp.on::before{content:"";position:absolute;left:-16px;top:16px;bottom:16px;width:5px;border-radius:0 4px 4px 0;background:var(--amber)}
-  .rapp{height:68px}
-  .sep{width:56px;height:1px;background:var(--line);margin:6px 0}
+  .rail{position:absolute;left:0;top:0;width:96px;height:810px;background:#000;z-index:5;
+    display:flex;flex-direction:column;align-items:center;padding:20px 0 18px;gap:8px}
+  .clock{font-weight:700;font-size:32px;line-height:1;letter-spacing:-.02em;font-variant-numeric:tabular-nums;-webkit-app-region:drag}
+  .date{font-size:14px;color:var(--ink-3);margin:4px 0 10px;-webkit-app-region:drag}
+  body.onmap .rapp,body.onmap .sep{display:none}
+  .sep{width:36px;height:2px;border-radius:1px;background:#202228;margin:6px 0}
   .grow{flex:1}
-  .mini{width:88px;height:88px;border-radius:var(--r-md);background:var(--panel) center/cover no-repeat;position:relative;overflow:hidden;display:none}
-  .mini .pp{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(8,16,28,.45);color:var(--text)}
+  .mini{width:64px;height:64px;border-radius:50%;background:var(--disc-2) center/cover no-repeat;position:relative;overflow:hidden;display:none;box-shadow:var(--lift)}
+  .mini .pp{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.45);color:var(--ink)}
 
-  /* ---------- icerik ---------- */
-  .stage{position:absolute;left:120px;top:0;width:1320px;height:810px}
-  .view{position:absolute;inset:0;transition:opacity .16s}
-  .hidden{opacity:0;pointer-events:none;visibility:hidden}
+  /* ---------- sahne ---------- */
+  .stage{position:absolute;left:96px;top:0;width:1344px;height:810px}
+  .view{position:absolute;inset:0}
+  .hidden{display:none!important}
 
-  /* ana ekran */
-  #home{padding:30px 32px 32px;display:grid;grid-template-columns:1fr 344px;grid-template-rows:84px 1fr;gap:24px}
-  .top{grid-column:1/3;display:flex;align-items:center;gap:24px}
-  .hello{margin-right:auto}
-  .hello h1{font-size:40px;font-weight:600;line-height:1.05}
-  .hello p{font-size:18px;color:var(--muted);margin-top:6px}
-  .search{width:640px;height:72px;border-radius:36px;background:var(--panel);border:1px solid var(--line);
-    display:flex;align-items:center;padding:0 10px 0 26px;gap:14px;color:var(--muted)}
-  .search:focus-within{border-color:var(--amber)}
-  .search input{flex:1;min-width:0;background:none;border:0;outline:0;color:var(--text);font-size:22px;font-family:inherit}
-  .search input::placeholder{color:var(--faint)}
-  .pill{height:52px;padding:0 24px;border-radius:26px;background:var(--panel2);font-size:19px;font-weight:600;color:var(--text);text-align:center}
-  .pill:hover{background:#1d2c48}
-  .pill.go{background:var(--amber);color:var(--amber-ink)}
+  /* ana ekran = oyunun haritasi */
+  #home{background:var(--stage)}
+  /* alt yazi icin yukselen yumusak siyah perde: kamyonda gercek yari saydam perde olur */
+  .scrim{position:absolute;left:0;right:0;bottom:0;height:360px;pointer-events:none;
+    background:linear-gradient(180deg,rgba(0,0,0,0) 0%,rgba(0,0,0,.42) 45%,rgba(0,0,0,.7) 100%)}
+  .search{position:absolute;left:24px;top:24px;width:620px;height:62px;border-radius:31px;background:var(--disc);box-shadow:var(--lift);
+    display:flex;align-items:center;gap:10px;padding:8px 8px 8px 22px;color:var(--ink-3)}
+  .search:focus-within{box-shadow:0 0 0 2px var(--ink),var(--lift)}
+  .search.need{box-shadow:0 0 0 3px var(--ink),var(--lift)}
+  .search input{flex:1;min-width:0;background:none;border:0;outline:0;font-size:20px}
+  .search input::placeholder,.urlbox input::placeholder,.namebox input::placeholder{color:var(--ink-3)}
+  .search.need input::placeholder{color:var(--ink)}
+  .pill{height:46px;padding:0 20px;border-radius:23px;background:var(--disc-2);color:var(--ink);font-size:17px;font-weight:600;flex:none;transition:background .12s}
+  .pill:hover{background:var(--disc-3)}
+  .pill.fill{background:var(--on);color:var(--on-ink)}
+  .pill.fill:hover{background:#fff}
+  .chips{position:absolute;right:24px;top:24px;display:flex;gap:10px}
+  .chip{height:50px;border-radius:25px;background:var(--disc);box-shadow:var(--lift);display:none;align-items:center;gap:10px;padding:6px 6px 6px 18px;font-size:16px;font-weight:600}
+  .chip.show{display:flex}
+  .chip button{height:38px;padding:0 16px;border-radius:19px;background:var(--disc-3);color:var(--ink);font-weight:700;font-size:15px}
+  .chip button:hover{background:#30343c}
+  .chip i{width:10px;height:10px;border-radius:5px;background:var(--bad)}
+  #warn{padding-right:18px}
 
-  .apps{display:grid;grid-template-columns:repeat(4,1fr);grid-template-rows:1fr 1fr 150px;gap:18px;min-height:0}
-  .app{border-radius:var(--r-md);background:var(--panel);border:1px solid var(--line);padding:22px 22px 20px;
-    display:flex;flex-direction:column;justify-content:space-between;transition:background .12s,transform .08s;min-width:0}
-  .app:hover{background:var(--panel2)} .app:active{transform:scale(.98)}
-  .app .n{font-size:23px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .app .s{font-size:16px;color:var(--muted);margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .app:not(.row) .n{white-space:normal;line-height:1.1}
-  .app.row{flex-direction:row;align-items:center;justify-content:flex-start;gap:16px;padding:18px 20px}
-  .app.row .n{font-size:21px}
-  .app.row>span:last-child{min-width:0}
-  .glyph{flex:none;width:60px;height:60px;border-radius:16px;background:rgba(255,255,255,.04);display:flex;align-items:center;justify-content:center}
-  .yt{color:var(--yt)} .ytm{color:var(--ytm)} .g{color:var(--g)} .kick{color:var(--kick)} .news{color:var(--news)} .radio{color:var(--radio)} .last{color:var(--last)} .set{color:var(--muted)}
+  .cap{position:absolute;left:24px;bottom:28px;width:720px}
+  .cap h1{font-size:60px;font-weight:700;line-height:.98;letter-spacing:-.03em;text-shadow:0 2px 12px rgba(0,0,0,.35)}
+  .cap .sub{font-size:19px;color:var(--ink);margin-top:10px;text-shadow:0 1px 8px rgba(0,0,0,.6)}
+  .addname{color:var(--ink);font-weight:700;text-decoration:underline;text-underline-offset:4px;margin-left:8px}
+  .np{margin-top:18px;height:80px;display:inline-flex;align-items:center;gap:14px;padding:8px 10px 8px 8px;border-radius:40px;background:var(--disc);box-shadow:var(--lift);max-width:620px}
+  .np .art{width:64px;height:64px;border-radius:50%;background:var(--disc-2) center/cover no-repeat;display:flex;align-items:center;justify-content:center;color:#5a5d66;flex:none}
+  .np .tx{min-width:0;flex:1;padding-right:6px}
+  .np .t{font-size:19px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:330px}
+  .np .a{font-size:15px;color:var(--ink-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:330px}
+  .np .a .src{color:var(--ink);font-weight:700;margin-right:8px}
+  .np .ctr{display:flex;gap:6px}
+  .np .ctr button{width:52px;height:52px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--disc-2)}
+  .np .ctr button:hover{background:var(--disc-3)}
+  .np .ctr #npPlay{width:60px;height:60px}
+  .np .ctr #npPlay.on{background:var(--on);color:var(--on-ink)}
 
-  /* harita karosu: ekranin ana isi, tek buyuk oge */
-  .maptile{grid-column:1/3;grid-row:1/3;position:relative;overflow:hidden;border-radius:var(--r-lg);
-    background:linear-gradient(180deg,#0f1b2e 0%,#132440 100%);border:1px solid #27395a;padding:30px 32px;
-    display:flex;flex-direction:column;justify-content:flex-end;transition:transform .08s}
-  .maptile:active{transform:scale(.99)}
-  .maptile:hover .road .dash{stroke:#ffb950}
-  .road{position:absolute;inset:0;width:100%;height:100%}
-  .maptile .n{position:relative;font-size:52px;font-weight:600;line-height:1}
-  .maptile .s{position:relative;font-size:19px;color:var(--muted);margin-top:10px;max-width:300px;line-height:1.35}
-  .maptile .go{position:absolute;top:28px;right:28px;width:64px;height:64px;border-radius:32px;background:var(--amber);color:var(--amber-ink);display:flex;align-items:center;justify-content:center}
+  /* sag ray: uygulama diskleri */
+  .stack{position:absolute;right:20px;bottom:28px;display:grid;grid-template-columns:repeat(2,84px);gap:10px 4px;justify-items:center}
+  .app{display:flex;flex-direction:column;align-items:center;gap:6px;width:84px}
+  .app[hidden]{display:none}
+  .app .disc{width:58px;height:58px}
+  .app .l{font-size:13px;font-weight:700;white-space:nowrap;background:var(--disc);color:var(--ink);padding:2px 9px;border-radius:10px;line-height:1.35}
+  .nf{color:var(--nf)} .pv{color:var(--pv)} .ax{color:var(--ax)} .yt{color:var(--yt)} .ytm{color:var(--ytm)} .g{color:var(--g)} .radio{color:var(--radio)} .kick{color:var(--kick)} .news{color:var(--news)} .last{color:var(--last)}
 
-  .side{display:flex;flex-direction:column;gap:18px;min-height:0}
-  .card{border-radius:var(--r-lg);background:var(--panel);border:1px solid var(--line);padding:22px}
-  .np{flex:1;display:flex;flex-direction:column;min-height:0}
-  .np .lbl{font-size:16px;color:var(--muted)}
-  .np .art{margin:14px 0 16px;flex:1;min-height:0;border-radius:var(--r-md);background:var(--panel2) center/cover no-repeat;display:flex;align-items:center;justify-content:center;color:var(--faint);cursor:pointer}
-  .np .t{font-size:23px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .np .a{font-size:17px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:4px}
-  .ctr{display:flex;justify-content:space-between;align-items:center;margin-top:16px;padding:0 10px}
-  .ctr button{width:64px;height:64px;border-radius:32px;display:flex;align-items:center;justify-content:center;color:var(--text)}
-  .ctr button:hover{background:var(--panel2)}
-  .ctr .play{width:76px;height:76px;border-radius:38px;background:var(--amber);color:var(--amber-ink)}
-  .ctr .play:hover{background:#ffb950}
 
-  .status{padding:16px 20px;font-size:16px}
-  .st{display:flex;align-items:center;gap:10px;color:#c3ccd8;padding:3px 0;line-height:1.3}
-  .st i{width:10px;height:10px;border-radius:5px;background:var(--faint);flex:none}
-  .st.ok i{background:var(--ok)} .st.bad i{background:var(--warn)}
-  .st.link{cursor:pointer;text-decoration:underline;text-underline-offset:3px}
-  .status .allok{display:none}
-  .status.ready .st{display:none}
-  .status.ready .allok{display:flex}
-  .keys{font-size:14px;color:var(--faint);margin-top:8px;line-height:1.45}
-  .keys b{color:var(--muted);font-weight:600}
-
-  /* harita gorunumu: macenta oyunda seffaf olur, altta oyunun haritasi gorunur */
-  #map{background:#ff00ff}
-  .npf{position:absolute;right:24px;bottom:24px;width:380px;height:100px;border-radius:var(--r-md);background:rgba(11,20,34,.97);
-    border:1px solid var(--line);display:none;align-items:center;gap:14px;padding:12px 14px 12px 12px}
-  .npf .a{width:76px;height:76px;border-radius:14px;background:var(--panel2) center/cover;flex:none}
-  .npf .tx{flex:1;min-width:0}
-  .npf .t{font-size:19px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .npf .s{font-size:15px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
-  .npf button{width:56px;height:56px;border-radius:28px;background:var(--amber);color:var(--amber-ink);display:flex;align-items:center;justify-content:center;flex:none}
-  #dimpx{display:none}
+  /* surus modu: oyun ondeyken (pencere odakta degil) kamyon ekraninda yalnizca harita, saat ve calan sarki.
+     Alt+Tab ile uygulamaya girince butun kontroller geri gelir. */
+  body.drive.onmap .search,body.drive.onmap .stack,body.drive.onmap .chips,body.drive.onmap .scrim,
+  body.drive.onmap .cap h1,body.drive.onmap .cap .sub,body.drive.onmap .np.idle,body.drive.onmap .np .ctr,
+  body.drive.onmap .rail>*:not(.clock){display:none!important}
+  body.drive.onmap .rail{background:var(--stage);padding-top:18px}
+  body.drive.onmap .clock{background:var(--disc);padding:10px 14px;border-radius:22px;font-size:28px;box-shadow:var(--lift)}
+  body.drive.onmap .np{margin-top:0;height:68px;padding-right:22px}
+  body.drive.onmap .np .art{width:52px;height:52px}
+  #mapkey{position:fixed;left:0;top:0;width:1px;height:1px;background:#1337c4;z-index:100;display:none;pointer-events:none}
+  body.onmap #mapkey{display:block}
 
   /* ayarlar */
-  #settings{padding:36px 40px;display:flex;flex-direction:column;justify-content:center;gap:26px}
+  #settings{background:var(--page);padding:34px 40px 28px;display:flex;flex-direction:column;justify-content:center;gap:24px}
   .shead{display:flex;align-items:flex-end;gap:24px}
   .shead>div{margin-right:auto}
-  .shead h1{font-size:38px;font-weight:600}
-  .namebox{display:flex;align-items:center;gap:14px;font-size:20px}
-  .namebox input{width:300px;height:56px;border-radius:28px;background:var(--panel);border:1px solid var(--line);color:var(--text);font-size:21px;font-family:inherit;padding:0 22px;outline:0}
-  .namebox input:focus{border-color:var(--amber)}
-  .namebox input::placeholder{color:var(--faint)}
-  .upd{display:none;align-items:center;gap:12px;height:52px;padding:0 10px 0 20px;border-radius:26px;background:var(--panel2);border:1px solid #3a4f73;font-size:18px;color:var(--text)}
-  .upd.show{display:flex}
-  .upd button{height:38px;padding:0 18px;border-radius:19px;background:var(--amber);color:var(--amber-ink);font-size:17px;font-weight:600}
-  .addname{color:var(--amber);font-size:18px;text-decoration:underline;text-underline-offset:4px;margin-left:10px}
-  .shead p{font-size:18px;color:var(--muted);margin-top:8px}
-  .sgrid{display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:stretch}
-  .sgroup{border-radius:var(--r-lg);background:var(--panel);border:1px solid var(--line);padding:26px 28px;display:flex;flex-direction:column;gap:20px}
-  .sgroup h2{font-size:24px;font-weight:600}
-  .sgroup .help{font-size:16px;color:var(--muted);line-height:1.45;margin-top:-10px}
-  .srow{display:grid;grid-template-columns:190px 1fr 74px;align-items:center;gap:16px;font-size:20px}
-  .srow b{text-align:right;font-weight:600;font-variant-numeric:tabular-nums}
-  .srow input{-webkit-appearance:none;appearance:none;height:36px;background:transparent;cursor:pointer}
-  .srow input::-webkit-slider-runnable-track{height:8px;border-radius:4px;
-    background:linear-gradient(90deg,var(--amber) 0 var(--p,50%),#243450 var(--p,50%) 100%)}
-  .srow input::-webkit-slider-thumb{-webkit-appearance:none;width:28px;height:28px;margin-top:-10px;border-radius:14px;background:var(--text);border:4px solid var(--bg)}
-  .fit{display:grid;grid-template-columns:300px 1fr;gap:26px;align-items:center}
-  .fit .rows{display:flex;flex-direction:column;gap:12px}
-  .fit .srow{grid-template-columns:96px 1fr 50px;font-size:19px}
-  .scr{width:300px;height:169px;border-radius:12px;background:#000;border:2px solid #2c3d5c;position:relative;overflow:hidden}
-  .scr .img{position:absolute;background:linear-gradient(135deg,#2a5d9a,#7c3a6e);border-radius:2px;transition:inset .1s}
-  .scr .img::after{content:"";position:absolute;left:50%;top:50%;width:26px;height:26px;margin:-13px 0 0 -13px;border-radius:13px;background:rgba(255,255,255,.3)}
-  .sfoot{display:flex;justify-content:space-between;align-items:center}
-  .updrow{display:flex;align-items:center;gap:16px;font-size:18px;color:var(--muted)}
-  #updBtn.go{background:var(--amber);color:var(--amber-ink)}
-  #updBtn[disabled]{opacity:.6;pointer-events:none}
-  #bSet{margin-top:6px}
+  .shead h1{font-size:56px;font-weight:700;line-height:.95;letter-spacing:-.03em}
+  .shead p{font-size:18px;color:var(--ink-3);margin-top:10px}
+  .namebox{display:flex;align-items:center;gap:14px;font-size:18px;color:var(--ink-3)}
+  .namebox input{width:260px;height:54px;border-radius:27px;background:var(--disc-2);border:0;font-size:19px;padding:0 22px;outline:0}
+  .namebox input:focus{box-shadow:0 0 0 2px var(--ink)}
+  .sgrid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+  .sgroup{border-radius:24px;background:var(--disc);padding:24px 28px;display:flex;flex-direction:column;gap:18px}
+  .sgroup h2{font-size:22px;font-weight:700;letter-spacing:-.01em}
+  .help{font-size:15px;color:var(--ink-3);line-height:1.45;max-width:58ch}
+  .srow{display:grid;grid-template-columns:170px 1fr 72px;align-items:center;gap:16px;font-size:18px}
+  .srow b{text-align:right;font-weight:700;font-variant-numeric:tabular-nums}
+  .srow input{-webkit-appearance:none;appearance:none;height:34px;background:transparent;cursor:pointer;border-radius:17px}
+  .srow input::-webkit-slider-runnable-track{height:6px;border-radius:3px;background:linear-gradient(90deg,var(--ink) 0 var(--p,50%),#5c606b var(--p,50%) 100%)}
+  .srow input::-webkit-slider-thumb{-webkit-appearance:none;width:26px;height:26px;margin-top:-10px;border-radius:13px;background:var(--ink);border:5px solid var(--disc)}
+  .fit{display:grid;grid-template-columns:240px 1fr;gap:22px;align-items:center}
+  .fit .rows{display:flex;flex-direction:column;gap:6px}
+  .fit .srow{grid-template-columns:48px 1fr 48px;font-size:17px}
+  .scr{width:240px;height:135px;border-radius:12px;background:#000;position:relative;overflow:hidden;box-shadow:inset 0 0 0 2px var(--disc-3)}
+  .scr .img{position:absolute;overflow:hidden;border-radius:2px}
+  .setup{border-radius:24px;background:var(--disc);padding:18px 28px;display:flex;align-items:center;gap:30px}
+  .setup h2{font-size:22px;font-weight:700;flex:none}
+  .status{display:flex;gap:28px;min-width:0;flex:1}
+  .st{display:flex;align-items:center;gap:10px;font-size:16px;color:var(--ink-3);white-space:nowrap;min-width:0}
+  .st span{overflow:hidden;text-overflow:ellipsis}
+  .st i{width:10px;height:10px;border-radius:5px;background:#5a5d66;flex:none}
+  .st.ok{color:var(--ink)} .st.ok i{background:var(--good)}
+  .st.bad{color:var(--ink)} .st.bad i{background:var(--bad)}
+  .st.link{cursor:pointer} .st.link span{text-decoration:underline;text-underline-offset:3px}
+  .sfoot{display:flex;align-items:center;gap:18px}
+  .brand{margin-right:auto;font-size:15px;color:var(--ink-3)}
+  .brand b{font-size:20px;font-weight:700;color:var(--ink);letter-spacing:-.01em;margin-right:8px}
+  .keys{font-size:14px;color:var(--ink-3);white-space:nowrap}
+  .keys b{color:var(--ink);font-weight:700}
+  .updrow{display:flex;align-items:center;gap:14px;font-size:16px;color:var(--ink-3);white-space:nowrap}
+  #updBtn[disabled]{opacity:.5;pointer-events:none}
 
   /* tarayici */
   #browser{background:#000;display:flex;flex-direction:column}
-  .bbar{height:68px;flex:none;display:flex;align-items:center;gap:10px;padding:8px 12px 8px 14px;background:#0b1422;border-bottom:1px solid var(--line)}
-  .urlbox{flex:1;height:52px;border-radius:26px;background:var(--panel);border:1px solid var(--line);display:flex;align-items:center;padding:0 20px;gap:12px;color:var(--muted)}
-  .urlbox:focus-within{border-color:var(--amber)}
-  .urlbox input{flex:1;background:none;border:0;outline:0;color:var(--text);font-size:19px;font-family:inherit}
-  .spin{width:20px;height:20px;border-radius:50%;border:3px solid #243450;border-top-color:var(--amber);animation:sp .8s linear infinite;display:none}
+  .bbar{height:72px;flex:none;display:flex;align-items:center;gap:10px;padding:10px 14px;background:#000}
+  .urlbox{flex:1;height:52px;border-radius:26px;background:var(--disc-2);display:flex;align-items:center;padding:0 20px;gap:12px;color:var(--ink-3)}
+  .urlbox:focus-within{box-shadow:0 0 0 2px var(--ink)}
+  .urlbox input{flex:1;background:none;border:0;outline:0;font-size:18px}
+  .spin{width:20px;height:20px;border-radius:50%;border:3px solid var(--disc-3);border-top-color:var(--ink);animation:sp .8s linear infinite;display:none}
   @keyframes sp{to{transform:rotate(360deg)}}
   .wvs{position:relative;flex:1}
   webview{position:absolute;inset:0;width:100%;height:100%;background:#000}
   webview.off{visibility:hidden;pointer-events:none}
 
-  .winbtns{position:absolute;right:12px;bottom:12px;display:flex;gap:6px;z-index:10;opacity:0;transition:opacity .2s}
-  body:hover .winbtns{opacity:.6}
-  .winbtns button{width:32px;height:32px;border-radius:16px;background:var(--panel2);font-size:14px;text-align:center}
+  .winbtns{position:absolute;right:10px;top:10px;display:flex;gap:6px;z-index:10;opacity:0;transition:opacity .2s}
+  .winbtns:hover,.winbtns:focus-within{opacity:.9}
+  .winbtns button{width:30px;height:30px;border-radius:15px;background:var(--disc-2);display:flex;align-items:center;justify-content:center;color:var(--ink)}
 </style>
 </head>
 <body>
 
-<div class="rail">
+<nav class="rail" aria-label="Gezinme">
   <div class="clock" id="clock">--:--</div>
   <div class="date" id="date"></div>
-  <button class="nav" id="bHome" title="Ana menü (Alt+Home)" aria-label="Ana menü">
-    <svg width="30" height="30" viewBox="0 0 24 24"><g fill="currentColor"><rect x="3" y="3" width="8" height="8" rx="2.2"/><rect x="13" y="3" width="8" height="8" rx="2.2"/><rect x="3" y="13" width="8" height="8" rx="2.2"/><rect x="13" y="13" width="8" height="8" rx="2.2"/></g></svg>
+  <button class="disc" id="bHome" title="Harita (Alt+Home)" aria-label="Harita">
+    <svg width="26" height="26" viewBox="0 0 24 24"><path d="M12 2.5a7 7 0 0 0-7 7c0 5 7 12.5 7 12.5s7-7.5 7-12.5a7 7 0 0 0-7-7zm0 9.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5z" fill="currentColor"/></svg>
   </button>
-  <button class="nav" id="bBack" title="Geri (Alt+←)" aria-label="Geri">
-    <svg width="30" height="30" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7" stroke="currentColor" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
-  </button>
-  <button class="nav" id="bFwd" title="İleri (Alt+→)" aria-label="İleri">
-    <svg width="30" height="30" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7" stroke="currentColor" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
-  </button>
-  <button class="nav" id="bReload" title="Yenile" aria-label="Sayfayı yenile">
-    <svg width="28" height="28" viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.34-5.66M20 4v5h-5" stroke="currentColor" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
-  </button>
-  <div class="sep"></div>
-  <button class="rapp" id="bMap" title="Harita" aria-label="Harita"><svg width="32" height="32" viewBox="0 0 24 24"><path d="M12 2.5a7 7 0 0 0-7 7c0 5 7 12.5 7 12.5s7-7.5 7-12.5a7 7 0 0 0-7-7zm0 9.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5z" fill="currentColor"/></svg></button>
-  <button class="rapp" data-app="youtube" title="YouTube" aria-label="YouTube"><svg class="yt" width="34" height="34" viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="4" fill="currentColor"/><path d="M10 9v6l5-3z" fill="#101a2a"/></svg></button>
-  <button class="rapp" data-app="music" title="YouTube Music" aria-label="YouTube Music"><svg class="ytm" width="32" height="32" viewBox="0 0 24 24"><path d="M9 18a3 3 0 1 1-2-2.83V5l12-2v11a3 3 0 1 1-2-2.83V6.3L9 7.7z" fill="currentColor"/></svg></button>
-  <button class="rapp" data-app="google" title="Google" aria-label="Google"><svg class="g" width="30" height="30" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.3" stroke="currentColor" stroke-width="2.6" fill="none"/><path d="M15.3 15.3 21 21" stroke="currentColor" stroke-width="2.8" stroke-linecap="round"/></svg></button>
+  <button class="disc" id="bBack" title="Geri (Alt+←)" aria-label="Geri"><svg width="26" height="26" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7" stroke="currentColor" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+  <button class="disc" id="bFwd" title="İleri (Alt+→)" aria-label="İleri"><svg width="26" height="26" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7" stroke="currentColor" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+  <button class="disc" id="bReload" title="Sayfayı yenile" aria-label="Sayfayı yenile"><svg width="24" height="24" viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.34-5.66M20 4v5h-5" stroke="currentColor" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+  <div class="sep" aria-hidden="true"></div>
+  <button class="disc rapp" data-app="youtube" title="YouTube" aria-label="YouTube"><svg class="yt" width="28" height="28" viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="4" fill="currentColor"/><path d="M10 9v6l5-3z" style="fill:var(--hole)"/></svg></button>
+  <button class="disc rapp" data-app="music" title="YouTube Music" aria-label="YouTube Music"><svg class="ytm" width="26" height="26" viewBox="0 0 24 24"><path d="M9 18a3 3 0 1 1-2-2.83V5l12-2v11a3 3 0 1 1-2-2.83V6.3L9 7.7z" fill="currentColor"/></svg></button>
+  <button class="disc rapp" data-app="google" title="Google" aria-label="Google"><svg class="g" width="24" height="24" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.3" stroke="currentColor" stroke-width="2.6" fill="none"/><path d="M15.3 15.3 21 21" stroke="currentColor" stroke-width="2.8" stroke-linecap="round"/></svg></button>
   <div class="grow"></div>
   <button class="mini" id="mini" title="Çalanı aç" aria-label="Çalanı aç"><div class="pp" id="miniPP"></div></button>
-  <button class="nav" id="bSet" title="Ekran ayarları" aria-label="Ekran ayarları"><svg width="28" height="28" viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h2M10 17h10" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><circle cx="16" cy="7" r="2.6" stroke="currentColor" stroke-width="2.2" fill="none"/><circle cx="8" cy="17" r="2.6" stroke="currentColor" stroke-width="2.2" fill="none"/></svg></button>
-</div>
+  <button class="disc" id="bSet" title="CarPlay Ekranı ayarları" aria-label="CarPlay Ekranı ayarları"><svg width="24" height="24" viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h2M10 17h10" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><circle cx="16" cy="7" r="2.6" stroke="currentColor" stroke-width="2.2" fill="none"/><circle cx="8" cy="17" r="2.6" stroke="currentColor" stroke-width="2.2" fill="none"/></svg></button>
+</nav>
 
-<div class="stage">
-  <!-- ANA EKRAN -->
-  <div class="view" id="home">
-    <div class="top">
-      <div class="hello"><h1 id="greet">İyi Yolculuklar</h1><p>Ne açalım?<button class="addname" id="addName">Adını ekle</button></p></div>
-      <div class="upd" id="upd"><span id="updT">Yeni sürüm hazır</span><button id="updB">Güncelle</button></div>
-      <div class="search">
-        <svg width="24" height="24" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.3" stroke="currentColor" stroke-width="2.4" fill="none"/><path d="M15.3 15.3 21 21" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></svg>
-        <input id="q" placeholder="Link yapıştır veya ara" spellcheck="false" autocomplete="off" aria-label="Link veya arama">
-        <button class="pill" id="paste">Yapıştır</button>
-        <button class="pill go" id="goBtn">Aç</button>
-      </div>
+<main class="stage">
+  <!-- ANA EKRAN: oyunun haritasi -->
+  <section class="view" id="home" aria-label="Harita ve uygulamalar">
+    <div class="scrim" aria-hidden="true"></div>
+
+    <div class="search">
+      <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.3" stroke="currentColor" stroke-width="2.4" fill="none"/><path d="M15.3 15.3 21 21" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></svg>
+      <input id="q" placeholder="Link yapıştır ya da ara" spellcheck="false" autocomplete="off" aria-label="Link ya da arama">
+      <button class="pill" id="paste" title="Panodaki linki aç">Yapıştır</button>
+      <button class="pill fill" id="goBtn">Aç</button>
     </div>
 
-    <div class="apps">
-      <button class="maptile" id="tMap">
-        <svg class="road" viewBox="0 0 600 420" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
-          <path d="M418 0 L240 420 M462 0 L660 420" stroke="#223656" stroke-width="3" fill="none"/>
-          <path class="dash" d="M440 30 L450 420" stroke="#d99436" stroke-width="7" stroke-dasharray="30 28" fill="none" opacity=".55"/>
-        </svg>
-        <span class="go" aria-hidden="true"><svg width="30" height="30" viewBox="0 0 24 24"><path d="M5 19 19 5M9 5h10v10" stroke="currentColor" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
-        <div class="n">Harita</div>
-        <div class="s">Oyunun navigasyonuna geç, müzik köşede çalmaya devam eder</div>
-      </button>
-      <button class="app" data-app="youtube"><span class="glyph yt"><svg width="40" height="40" viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="4" fill="currentColor"/><path d="M10 9v6l5-3z" fill="#101a2a"/></svg></span><span><div class="n">YouTube</div><div class="s">Video</div></span></button>
-      <button class="app" data-app="music"><span class="glyph ytm"><svg width="36" height="36" viewBox="0 0 24 24"><path d="M9 18a3 3 0 1 1-2-2.83V5l12-2v11a3 3 0 1 1-2-2.83V6.3L9 7.7z" fill="currentColor"/></svg></span><span><div class="n">YouTube Music</div><div class="s">Müzik</div></span></button>
-      <button class="app" data-app="google"><span class="glyph g"><svg width="34" height="34" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.3" stroke="currentColor" stroke-width="2.6" fill="none"/><path d="M15.3 15.3 21 21" stroke="currentColor" stroke-width="2.8" stroke-linecap="round"/></svg></span><span><div class="n">Google</div><div class="s">Arama</div></span></button>
-      <button class="app" data-url="https://radio.garden"><span class="glyph radio"><svg width="36" height="36" viewBox="0 0 24 24"><circle cx="12" cy="13" r="2.4" fill="currentColor"/><path d="M7.5 17.5a6.4 6.4 0 0 1 0-9M16.5 8.5a6.4 6.4 0 0 1 0 9M4.6 20.4a10.4 10.4 0 0 1 0-14.8M19.4 5.6a10.4 10.4 0 0 1 0 14.8" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/></svg></span><span><div class="n">Radyo</div><div class="s">Dünya radyoları</div></span></button>
-      <button class="app row" data-url="https://kick.com"><span class="glyph kick"><svg width="30" height="30" viewBox="0 0 24 24"><path d="M4 3h5v6h2V6h2V3h5v6h-2v2h-2v2h2v2h2v6h-5v-3h-2v-3H9v6H4z" fill="currentColor"/></svg></span><span><div class="n">Kick</div><div class="s">Canlı yayın</div></span></button>
-      <button class="app row" data-url="https://news.google.com/?hl=tr&gl=TR&ceid=TR:tr"><span class="glyph news"><svg width="30" height="30" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2.5" stroke="currentColor" stroke-width="2.2" fill="none"/><path d="M8 9h8M8 13h8M8 17h5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span><span><div class="n">Haberler</div><div class="s">Gündem</div></span></button>
-      <button class="app row" id="lastApp"><span class="glyph last"><svg width="30" height="30" viewBox="0 0 24 24"><path d="M12 7v5l3 2" stroke="currentColor" stroke-width="2.2" fill="none" stroke-linecap="round"/><circle cx="12" cy="12" r="8.5" stroke="currentColor" stroke-width="2.2" fill="none"/></svg></span><span style="min-width:0"><div class="n">Son link</div><div class="s" id="lastSub">Henüz yok</div></span></button>
-      <button class="app row" id="tSet"><span class="glyph set"><svg width="30" height="30" viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h2M10 17h10" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><circle cx="16" cy="7" r="2.6" stroke="currentColor" stroke-width="2.2" fill="none"/><circle cx="8" cy="17" r="2.6" stroke="currentColor" stroke-width="2.2" fill="none"/></svg></span><span><div class="n">Ekran</div><div class="s">Ayarlar</div></span></button>
+    <div class="chips">
+      <button class="chip" id="warn" title="Ayrıntılar ayarlarda"><i></i><span id="warnT">Kurulumda sorun var</span></button>
+      <div class="chip" id="upd"><span id="updT">Yeni sürüm hazır</span><button id="updB">Güncelle</button></div>
     </div>
 
-    <div class="side">
-      <div class="card np">
-        <div class="lbl">Şimdi çalıyor</div>
-        <div class="art" id="npArt"><svg width="64" height="64" viewBox="0 0 24 24"><path d="M9 18a3 3 0 1 1-2-2.83V5l12-2v11a3 3 0 1 1-2-2.83V6.3L9 7.7z" fill="currentColor"/></svg></div>
-        <div class="t" id="npT">Bir şey çalmıyor</div>
-        <div class="a" id="npA">YouTube Music veya YouTube aç</div>
+    <div class="cap">
+      <h1 id="greet">İyi yolculuklar</h1>
+      <p class="sub">Harita hep arkada. Ne açalım?<button class="addname" id="addName">Adını ekle</button></p>
+      <div class="np idle" id="npCard">
+        <button class="art" id="npArt" title="Çalanı aç" aria-label="Çalanı aç"><svg width="28" height="28" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18a3 3 0 1 1-2-2.83V5l12-2v11a3 3 0 1 1-2-2.83V6.3L9 7.7z" fill="currentColor"/></svg></button>
+        <div class="tx"><div class="t" id="npT">Şu an bir şey çalmıyor</div><div class="a" id="npA">YouTube Music'ten bir şarkı aç</div></div>
         <div class="ctr">
-          <button id="npPrev" aria-label="Önceki"><svg width="30" height="30" viewBox="0 0 24 24"><path d="M6 5h2v14H6zM20 5v14L9 12z" fill="currentColor"/></svg></button>
-          <button class="play" id="npPlay" aria-label="Oynat veya duraklat"><svg id="npIcon" width="32" height="32" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" fill="currentColor"/></svg></button>
-          <button id="npNext" aria-label="Sonraki"><svg width="30" height="30" viewBox="0 0 24 24"><path d="M16 5h2v14h-2zM4 5v14l11-7z" fill="currentColor"/></svg></button>
+          <button id="npPrev" aria-label="Önceki"><svg width="24" height="24" viewBox="0 0 24 24"><path d="M6 5h2v14H6zM20 5v14L9 12z" fill="currentColor"/></svg></button>
+          <button id="npPlay" aria-label="Oynat ya da duraklat"><svg id="npIcon" width="26" height="26" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" fill="currentColor"/></svg></button>
+          <button id="npNext" aria-label="Sonraki"><svg width="24" height="24" viewBox="0 0 24 24"><path d="M16 5h2v14h-2zM4 5v14l11-7z" fill="currentColor"/></svg></button>
         </div>
       </div>
-      <div class="card status" id="status">
-        <div class="st ok allok"><i></i><span>CarPlay Ekranı hazır</span></div>
-        <div class="st" id="stMod"><i></i><span>Mod kontrol ediliyor</span></div>
-        <div class="st" id="stKey"><i></i><span>Tuş ayarı kontrol ediliyor</span></div>
-        <div class="st" id="stPlg"><i></i><span>Eklenti kontrol ediliyor</span></div>
-        <div class="keys"><b>Alt+←</b> geri, <b>Alt+Home</b> ana menü</div>
-      </div>
     </div>
-  </div>
+
+    <!-- Netflix ve Prime Video gizli: Widevine VMP imzasi (castLabs EVS) gelince "hidden" kaldirilacak -->
+    <div class="stack" aria-label="Uygulamalar">
+      <div class="app"><button class="disc" data-app="youtube" aria-label="YouTube"><svg class="yt" width="30" height="30" viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="4" fill="currentColor"/><path d="M10 9v6l5-3z" style="fill:var(--hole)"/></svg></button><span class="l">YouTube</span></div>
+      <div class="app"><button class="disc" data-app="music" aria-label="YouTube Music"><svg class="ytm" width="28" height="28" viewBox="0 0 24 24"><path d="M9 18a3 3 0 1 1-2-2.83V5l12-2v11a3 3 0 1 1-2-2.83V6.3L9 7.7z" fill="currentColor"/></svg></button><span class="l">Müzik</span></div>
+      <div class="app" hidden><button class="disc" data-url="https://www.netflix.com/browse" aria-label="Netflix"><svg class="nf" width="26" height="26" viewBox="0 0 24 24"><path d="M6 3h3.3l5.4 12.2V3H18v18h-3.3L9.3 8.8V21H6z" fill="currentColor"/></svg></button><span class="l">Netflix</span></div>
+      <div class="app" hidden><button class="disc" data-url="https://www.primevideo.com" aria-label="Prime Video"><svg class="pv" width="28" height="28" viewBox="0 0 24 24"><path d="M9.5 5.5v8l6.5-4z" fill="currentColor"/><path d="M4.5 16.8c4.3 2.6 10.2 2.6 14.5 0" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/><path d="M16.4 15.4l2.9 1.2-1.1 2.9" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></button><span class="l">Prime Video</span></div>
+      <div class="app"><button class="disc" data-url="https://animecix.tv" aria-label="Animecix"><svg class="ax" width="26" height="26" viewBox="0 0 24 24"><path d="M12 2.8l2.3 6 6.2.9-4.7 4.2 1.4 6.3L12 17l-5.2 3.2 1.4-6.3-4.7-4.2 6.2-.9z" fill="currentColor"/></svg></button><span class="l">Animecix</span></div>
+      <div class="app"><button class="disc" data-url="https://radio.garden" aria-label="Radyo"><svg class="radio" width="30" height="30" viewBox="0 0 24 24"><circle cx="12" cy="13" r="2.4" fill="currentColor"/><path d="M7.5 17.5a6.4 6.4 0 0 1 0-9M16.5 8.5a6.4 6.4 0 0 1 0 9M4.6 20.4a10.4 10.4 0 0 1 0-14.8M19.4 5.6a10.4 10.4 0 0 1 0 14.8" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/></svg></button><span class="l">Radyo</span></div>
+      <div class="app"><button class="disc" data-url="https://kick.com" aria-label="Kick"><svg class="kick" width="26" height="26" viewBox="0 0 24 24"><path d="M4 3h5v6h2V6h2V3h5v6h-2v2h-2v2h2v2h2v6h-5v-3h-2v-3H9v6H4z" fill="currentColor"/></svg></button><span class="l">Kick</span></div>
+      <div class="app"><button class="disc" data-app="google" aria-label="Google"><svg class="g" width="26" height="26" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.3" stroke="currentColor" stroke-width="2.6" fill="none"/><path d="M15.3 15.3 21 21" stroke="currentColor" stroke-width="2.8" stroke-linecap="round"/></svg></button><span class="l">Google</span></div>
+      <div class="app"><button class="disc" data-url="https://news.google.com/?hl=tr&gl=TR&ceid=TR:tr" aria-label="Haberler"><svg class="news" width="26" height="26" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2.5" stroke="currentColor" stroke-width="2.2" fill="none"/><path d="M8 9h8M8 13h8M8 17h5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button><span class="l">Haberler</span></div>
+      <div class="app"><button class="disc" id="lastApp" aria-label="Son link"><svg class="last" width="26" height="26" viewBox="0 0 24 24"><path d="M12 7v5l3 2" stroke="currentColor" stroke-width="2.2" fill="none" stroke-linecap="round"/><circle cx="12" cy="12" r="8.5" stroke="currentColor" stroke-width="2.2" fill="none"/></svg></button><span class="l" id="lastSub">Son link</span></div>
+    </div>
+  </section>
 
   <!-- AYARLAR -->
-  <div class="view hidden" id="settings">
+  <section class="view hidden" id="settings" aria-label="CarPlay Ekranı ayarları">
     <div class="shead"><div><h1>CarPlay Ekranı</h1><p>Oyun açıkken değiştir, Smart Dash'te bir saniye içinde görünür.</p></div><label class="namebox"><span>Adın</span><input id="uName" maxlength="20" placeholder="Örneğin Yasin" spellcheck="false" autocomplete="off"></label></div>
     <div class="sgrid">
       <div class="sgroup">
         <h2>Görüntü</h2>
-        <div class="srow"><span>Parlaklık</span><input type="range" id="sDim" min="5" max="200" step="5"><b id="vDim"></b></div>
-        <div class="srow"><span>Beyazları yumuşat</span><input type="range" id="sW" min="0" max="100" step="5"><b id="vW"></b></div>
-        <div class="srow"><span>Akıcılık</span><input type="range" id="sF" min="10" max="60" step="5"><b id="vF"></b></div>
-        <p class="help" style="margin-top:0">Beyazlar gözünü alıyorsa önce yumuşatmayı artır, sonra parlaklığı kıs. Akıcılığı düşürmek oyunda biraz FPS kazandırır.</p>
+        <label class="srow"><span>Parlaklık</span><input type="range" id="sDim" min="5" max="200" step="5"><b id="vDim"></b></label>
+        <label class="srow"><span>Beyazları yumuşat</span><input type="range" id="sW" min="0" max="100" step="5"><b id="vW"></b></label>
+        <label class="srow"><span>Akıcılık</span><input type="range" id="sF" min="10" max="60" step="5"><b id="vF"></b></label>
+        <p class="help">Beyazlar gözünü alıyorsa önce yumuşatmayı artır, sonra parlaklığı kıs. Akıcılığı düşürmek oyunda biraz FPS kazandırır.</p>
       </div>
       <div class="sgroup">
         <h2>Ekrana sığdır</h2>
-        <p class="help">Kenarlarda renkli şerit varsa boşluğu artır. Kenarlar siyah kalır.</p>
+        <p class="help">Kenarlarda renkli şerit kalıyorsa o kenarın boşluğunu artır. Boşluklar siyah kalır.</p>
         <div class="fit">
-          <div class="scr" aria-hidden="true"><div class="img" id="scrImg"></div></div>
+          <div class="scr" aria-hidden="true"><div class="img" id="scrImg"><svg viewBox="0 0 160 90" preserveAspectRatio="none" width="100%" height="100%"><rect width="160" height="90" fill="#23262b"/><path d="M0 20 C 40 22 70 12 100 16 S 140 26 160 22M60 0 L 70 90" stroke="#3a3f47" stroke-width="2" fill="none"/><path d="M14 90 C 22 66 34 48 52 40 S 90 34 110 37 S 140 42 160 40" stroke="#e8473c" stroke-width="3" fill="none"/><rect x="0" y="0" width="11" height="90" fill="#000"/><rect x="15" y="4" width="62" height="8" rx="4" fill="#0f1013"/><g fill="#0f1013"><circle cx="152" cy="26" r="4"/><circle cx="152" cy="38" r="4"/><circle cx="152" cy="50" r="4"/><circle cx="152" cy="62" r="4"/><circle cx="152" cy="74" r="4"/></g><rect x="15" y="64" width="40" height="6" rx="1" fill="#f6f5f1"/><rect x="15" y="76" width="56" height="9" rx="4.5" fill="#0f1013"/></svg></div></div>
           <div class="rows">
-            <div class="srow"><span>Sol</span><input type="range" id="sL" min="0" max="25" step="1"><b id="vL"></b></div>
-            <div class="srow"><span>Üst</span><input type="range" id="sT" min="0" max="25" step="1"><b id="vT"></b></div>
-            <div class="srow"><span>Sağ</span><input type="range" id="sR" min="0" max="25" step="1"><b id="vR"></b></div>
-            <div class="srow"><span>Alt</span><input type="range" id="sB" min="0" max="25" step="1"><b id="vB"></b></div>
+            <label class="srow"><span>Sol</span><input type="range" id="sL" min="0" max="25" step="1"><b id="vL"></b></label>
+            <label class="srow"><span>Üst</span><input type="range" id="sT" min="0" max="25" step="1"><b id="vT"></b></label>
+            <label class="srow"><span>Sağ</span><input type="range" id="sR" min="0" max="25" step="1"><b id="vR"></b></label>
+            <label class="srow"><span>Alt</span><input type="range" id="sB" min="0" max="25" step="1"><b id="vB"></b></label>
           </div>
         </div>
       </div>
     </div>
-    <div class="sfoot"><button class="pill" id="sReset">Varsayılana dön</button><div class="updrow"><span id="updInfo">Sürüm kontrol ediliyor</span><button class="pill" id="updBtn">Güncellemeleri kontrol et</button></div></div>
-  </div>
-
-  <!-- HARITA (oyunun haritasi) -->
-  <div class="view hidden" id="map">
-    <div class="npf" id="npf"><div class="a" id="npfA"></div><div class="tx"><div class="t" id="npfT"></div><div class="s" id="npfS"></div></div>
-      <button id="npfP" aria-label="Oynat veya duraklat"><svg id="npfI" width="26" height="26" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" fill="currentColor"/></svg></button></div>
-  </div>
+    <div class="setup">
+      <h2>Kurulum</h2>
+      <div class="status" id="status" aria-live="polite">
+        <div class="st" id="stMod"><i></i><span>Mod kontrol ediliyor</span></div>
+        <div class="st" id="stKey"><i></i><span>Tuş ayarı kontrol ediliyor</span></div>
+        <div class="st" id="stPlg"><i></i><span>Eklenti kontrol ediliyor</span></div>
+      </div>
+    </div>
+    <div class="sfoot">
+      <div class="brand"><b>ETS2 CarPlay</b>servetsayarexe yaptı</div>
+      <div class="keys"><b>Alt+←</b> geri, <b>Alt+Home</b> harita, <b>Ctrl+L</b> adres çubuğu</div>
+      <button class="pill" id="sReset">Varsayılana dön</button>
+      <div class="updrow"><span id="updInfo">Sürüm kontrol ediliyor</span><button class="pill" id="updBtn">Güncellemeleri kontrol et</button></div>
+    </div>
+  </section>
 
   <!-- TARAYICI -->
-  <div class="view hidden" id="browser">
+  <section class="view hidden" id="browser" aria-label="Tarayıcı">
     <div class="bbar">
       <div class="urlbox">
-        <svg width="18" height="18" viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="10" rx="2.5" fill="currentColor"/><path d="M8 10V7a4 4 0 0 1 8 0v3" stroke="currentColor" stroke-width="2.2" fill="none"/></svg>
-        <input id="url" spellcheck="false" autocomplete="off" aria-label="Adres">
+        <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="10" width="14" height="10" rx="2.5" fill="currentColor"/><path d="M8 10V7a4 4 0 0 1 8 0v3" stroke="currentColor" stroke-width="2.2" fill="none"/></svg>
+        <input id="url" spellcheck="false" autocomplete="off" aria-label="Adres" placeholder="Adres ya da arama">
         <div class="spin" id="spin"></div>
       </div>
-      <button class="pill" id="paste2">Yapıştır</button>
+      <button class="pill" id="paste2" title="Panodaki linki aç">Yapıştır</button>
     </div>
     <div class="wvs">
       <webview id="wv-music" class="off" partition="persist:carplay" allowpopups src="about:blank"></webview>
       <webview id="wv-web" class="off" partition="persist:carplay" allowpopups src="about:blank"></webview>
     </div>
-  </div>
-</div>
+  </section>
+</main>
 
-<div id="dimpx"></div>
-<div class="winbtns"><button id="wMin" title="Gizle (görüntü vermeye devam eder, Alt+Tab ile geri gelir)">–</button><button id="wClose" title="Kapat">✕</button></div>
+<div id="mapkey"></div>
+<div class="winbtns">
+  <button id="wMin" title="Gizle (yayın sürer, Alt+Tab ile geri gelir)" aria-label="Gizle"><svg width="12" height="12" viewBox="0 0 24 24"><path d="M5 12h14" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg></button>
+  <button id="wClose" title="Kapat" aria-label="Kapat"><svg width="12" height="12" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg></button>
+</div>
 
 <script>
 const { ipcRenderer, clipboard } = require('electron');
@@ -321,7 +319,7 @@ const APPS = {
 const wvs = { music:$('wv-music'), web:$('wv-web') };
 const loaded = { music:false, web:false };
 const fresh = { music:false, web:false };
-let active = null;      // 'music' | 'web' | null (ana ekran)
+let active = null;      // null = ana ekran (harita) | 'music' | 'web' | 'settings'
 let lastWv = 'web';
 
 /* saat */
@@ -329,43 +327,36 @@ const pad = n => String(n).padStart(2,'0');
 const days = ['Paz','Pzt','Sal','Çar','Per','Cum','Cmt'], months=['Oca','Şub','Mar','Nis','May','Haz','Tem','Ağu','Eyl','Eki','Kas','Ara'];
 function tick(){ const d=new Date(); $('clock').textContent=pad(d.getHours())+':'+pad(d.getMinutes());
   $('date').textContent=days[d.getDay()]+' '+d.getDate()+' '+months[d.getMonth()];
-  const h=d.getHours(); const nm=userName(); $('greet').textContent = (h<6?'İyi Geceler':h<12?'Günaydın':h<18?'İyi Yolculuklar':'İyi Akşamlar') + (nm?' '+nm:''); $('addName').style.display = nm?'none':''; }
+  const h=d.getHours(); const nm=userName(); $('greet').textContent = (h<6?'İyi geceler':h<12?'Günaydın':h<18?'İyi yolculuklar':'İyi akşamlar') + (nm?' '+nm:''); $('addName').style.display = nm?'none':''; }
 function store(k,v){ try{localStorage.setItem(k,v)}catch(e){} }
 function load(k){ try{return localStorage.getItem(k)}catch(e){return null} }
 function userName(){ const n=(load('cp_name')||'').trim(); return n ? n.charAt(0).toLocaleUpperCase('tr-TR')+n.slice(1) : ''; }
 tick(); setInterval(tick, 5000);
 
-/* gorunumler */
-function hideSettings(){ $('settings').classList.add('hidden'); }
-function showSettings(){
-  active = 'settings';
-  ['map','home','browser'].forEach(id => $(id).classList.add('hidden'));
-  $('settings').classList.remove('hidden');
-  Object.values(wvs).forEach(w => w.classList.add('off'));
-  markRail(); updateNav();
-}
-function showMap(){
-  active = 'map'; hideSettings();
-  $('map').classList.remove('hidden'); $('home').classList.add('hidden'); $('browser').classList.add('hidden');
-  Object.values(wvs).forEach(w => w.classList.add('off'));
-  markRail(); updateNav();
-}
-function showHome(){
-  active = null; hideSettings();
-  $('map').classList.add('hidden');
-  $('home').classList.remove('hidden'); $('browser').classList.add('hidden');
-  Object.values(wvs).forEach(w => w.classList.add('off'));
-  markRail(); updateNav();
-}
+/* gorunumler: sert gecis, kaydirma ya da solma yok */
+function show(id){ ['home','settings','browser'].forEach(v => $(v).classList.toggle('hidden', v !== id)); }
+function showHome(){ active = null; show('home'); Object.values(wvs).forEach(w => w.classList.add('off')); markRail(); updateNav(); }
+const showMap = showHome;   /* ana ekran haritanin kendisi */
+function showSettings(){ active = 'settings'; show('settings'); Object.values(wvs).forEach(w => w.classList.add('off')); markRail(); updateNav(); }
 function showWv(name){
-  active = name; lastWv = name; hideSettings();
-  $('map').classList.add('hidden');
-  $('home').classList.add('hidden'); $('browser').classList.remove('hidden');
+  active = name; lastWv = name; show('browser');
   for (const k in wvs) wvs[k].classList.toggle('off', k !== name);
   markRail(); updateNav(); syncUrl();
 }
+/* calan ya da son acilan kaynagin sag raydaki diski beyazla dolar */
+const HOSTS = [['music.youtube.com','[data-app="music"]'],['netflix.com','[data-url*="netflix"]'],['primevideo.com','[data-url*="primevideo"]'],['animecix','[data-url*="animecix"]'],['youtube.com','[data-app="youtube"]'],['google.','[data-app="google"]'],['radio.garden','[data-url*="radio.garden"]'],['kick.com','[data-url*="kick.com"]'],['news.google.com','[data-url*="news.google"]']];
+function liveSel(){
+  const src = npSource || (loaded[lastWv] ? lastWv : null); if (!src) return null;
+  let u=''; try{ u = wvs[src].getURL(); }catch(e){} if (!u || u==='about:blank') return null;
+  const hit = HOSTS.find(([h]) => u.includes(h)); return hit ? hit[1] : '#lastApp';
+}
+function markStack(){
+  const sel = liveSel();
+  document.querySelectorAll('.stack .disc').forEach(d => d.classList.toggle('on', !!sel && d.matches(sel)));
+}
 function markRail(){
-  $('bMap').classList.toggle('on', active==='map');
+  document.body.classList.toggle('onmap', active===null);
+  markStack();
   $('bHome').classList.toggle('on', active===null);
   $('bSet').classList.toggle('on', active==='settings');
   document.querySelectorAll('.rapp').forEach(b => {
@@ -380,7 +371,8 @@ function markRail(){
 function normalize(s){
   s=(s||'').trim(); if(!s) return null;
   if (/^https?:\/\//i.test(s)) return s;
-  if (/^[\w-]+(\.[\w-]+)+(:\d+)?(\/\S*)?$/.test(s)) return 'https://'+s;
+  /* alan adi: son parca harf olmali ("3.5" gibi sayilar aramaya gider) */
+  if (/^[\w-]+(\.[\w-]+)*\.[a-z]{2,}(:\d+)?(\/\S*)?$/i.test(s)) return 'https://'+s;
   return 'https://www.google.com/search?q='+encodeURIComponent(s);
 }
 function openUrl(u, where){
@@ -397,18 +389,26 @@ function openApp(name){
 }
 document.querySelectorAll('[data-app]').forEach(b => b.addEventListener('click', () => openApp(b.dataset.app)));
 document.querySelectorAll('[data-url]').forEach(b => b.addEventListener('click', () => openUrl(b.dataset.url)));
-function refreshLast(){ const l=load('cp_last'); $('lastSub').textContent = l ? l.replace(/^https?:\/\/(www\.)?/,'').slice(0,24) : 'Henüz yok'; }
+function refreshLast(){ const l=load('cp_last'); const short = l ? l.replace(/^https?:\/\/(www\.)?/,'') : '';
+  $('lastApp').title = l ? short : 'Henüz link açılmadı'; }
 refreshLast();
-$('lastApp').onclick = () => { const l=load('cp_last'); if(l) openUrl(l); else $('q').focus(); };
+$('lastApp').onclick = () => { const l=load('cp_last'); if(l) openUrl(l); else needInput(); };
 
 /* arama / yapistir */
 const q=$('q');
+let hintT = 0;
+function needInput(){
+  const box = q.parentElement; q.focus();
+  q.placeholder = 'Önce bir link yapıştır ya da aranacak şeyi yaz';
+  box.classList.add('need'); clearTimeout(hintT);
+  hintT = setTimeout(() => { q.placeholder = 'Link yapıştır ya da ara'; box.classList.remove('need'); }, 2600);
+}
 q.addEventListener('keydown', e => { if(e.key==='Enter') openUrl(normalize(q.value)); });
-$('goBtn').onclick = () => openUrl(normalize(q.value));
-$('paste').onclick = () => { const t=clipboard.readText().trim(); if(t){ q.value=t; openUrl(normalize(t)); } else q.focus(); };
-$('paste2').onclick = () => { const t=clipboard.readText().trim(); if(t) openUrl(normalize(t), active||'web'); };
+$('goBtn').onclick = () => { if (q.value.trim()) openUrl(normalize(q.value)); else needInput(); };
+$('paste').onclick = () => { const t=clipboard.readText().trim(); if(t){ q.value=t; openUrl(normalize(t)); } else needInput(); };
+$('paste2').onclick = () => { const t=clipboard.readText().trim(); if(t) openUrl(normalize(t), active==='music'?'music':'web'); };
 const urlIn=$('url');
-urlIn.addEventListener('keydown', e => { if(e.key==='Enter'){ openUrl(normalize(urlIn.value), active||'web'); urlIn.blur(); } });
+urlIn.addEventListener('keydown', e => { if(e.key==='Enter'){ openUrl(normalize(urlIn.value), active==='music'?'music':'web'); urlIn.blur(); } });
 urlIn.addEventListener('focus', () => setTimeout(()=>urlIn.select(),0));
 
 /* gezinme */
@@ -422,15 +422,13 @@ function back(){
 }
 function fwd(){ const w=cur(); if(w && w.canGoForward()) w.goForward(); else if(!active && loaded[lastWv]) showWv(lastWv); }
 $('bHome').onclick = showHome;
-$('bMap').onclick = showMap;
-$('tMap').onclick = showMap;
 $('bBack').onclick = back;
 $('bFwd').onclick = fwd;
 $('bReload').onclick = () => { const w=cur(); if(w) w.reload(); };
 function updateNav(){
   const w=cur();
-  let canF=false; try{ canF = w ? w.canGoForward() : loaded[lastWv]; }catch(e){}
-  $('bBack').disabled = !active;  /* haritadan geri = ana menu */
+  let canF=false; try{ canF = w ? w.canGoForward() : (!active && loaded[lastWv]); }catch(e){}
+  $('bBack').disabled = !active;
   $('bFwd').disabled = !canF;
   $('bReload').disabled = !cur();
 }
@@ -442,7 +440,7 @@ document.addEventListener('keydown', e => {
   if (e.altKey && e.key==='ArrowLeft') back();
   if (e.altKey && e.key==='ArrowRight') fwd();
   if (e.altKey && e.key==='Home') showHome();
-  if (e.ctrlKey && e.key.toLowerCase()==='l'){ e.preventDefault(); if(!active) q.focus(); else urlIn.focus(); }
+  if (e.ctrlKey && e.key.toLowerCase()==='l'){ e.preventDefault(); if(!cur()){ if(active) showHome(); q.focus(); } else urlIn.focus(); }
 });
 document.addEventListener('mouseup', e => { if(e.button===3) back(); if(e.button===4) fwd(); });
 
@@ -464,6 +462,7 @@ const NP_JS = `(() => {
   const art = m && m.artwork && m.artwork.length ? m.artwork[m.artwork.length-1].src : '';
   return { t: m ? m.title : document.title, a: m ? m.artist : '', art, playing: v ? !v.paused : false };
 })()`;
+const PAUSE = '<path d="M7 5h4v14H7zM13 5h4v14h-4z" fill="currentColor"/>', PLAY = '<path d="M8 5v14l11-7z" fill="currentColor"/>';
 let npSource = null;
 async function pollNP(){
   let best=null, src=null;
@@ -474,15 +473,17 @@ async function pollNP(){
   }
   npSource = src;
   if (best){
-    $('npT').textContent = best.t || '—'; $('npA').textContent = best.a || (src==='music'?'YouTube Music':'YouTube');
+    const srcName = src==='music' ? 'YouTube Music' : 'YouTube';
+    $('npT').textContent = best.t || '—';
+    $('npA').innerHTML = ''; const sp=document.createElement('span'); sp.className='src'; sp.textContent=srcName; $('npA').append(sp, document.createTextNode(best.a || ''));
     if (best.art){ $('npArt').style.backgroundImage=`url("${best.art}")`; $('npArt').innerHTML=''; $('mini').style.backgroundImage=`url("${best.art}")`; }
-    $('npIcon').innerHTML = best.playing ? '<path d="M7 5h4v14H7zM13 5h4v14h-4z" fill="currentColor"/>' : '<path d="M8 5v14l11-7z" fill="currentColor"/>';
-    $('miniPP').innerHTML = best.playing ? '<svg width="26" height="26" viewBox="0 0 24 24"><path d="M7 5h4v14H7zM13 5h4v14h-4z" fill="currentColor"/></svg>' : '<svg width="26" height="26" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" fill="currentColor"/></svg>';
+    $('npIcon').innerHTML = best.playing ? PAUSE : PLAY;
+    $('npPlay').classList.toggle('on', !!best.playing);   /* imza: calan kontrol beyazla dolar */
+    $('miniPP').innerHTML = '<svg width="24" height="24" viewBox="0 0 24 24">' + (best.playing ? PAUSE : PLAY) + '</svg>';
     $('mini').style.display='block';
-    $('npf').style.display='flex'; $('npfT').textContent=best.t||''; $('npfS').textContent=best.a||'';
-    if (best.art) $('npfA').style.backgroundImage=`url("${best.art}")`;
-    $('npfI').innerHTML = best.playing ? '<path d="M7 5h4v14H7zM13 5h4v14h-4z" fill="currentColor"/>' : '<path d="M8 5v14l11-7z" fill="currentColor"/>';
+    $('npCard').classList.remove('idle');
   }
+  markStack();
 }
 setInterval(pollNP, 1500);
 function npCmd(cmd){
@@ -495,21 +496,28 @@ function npCmd(cmd){
   wvs[npSource].executeJavaScript(js, true).catch(()=>{});
   setTimeout(pollNP, 400);
 }
-$('npPlay').onclick=()=>npCmd('play'); $('npfP').onclick=()=>npCmd('play'); $('npNext').onclick=()=>npCmd('next'); $('npPrev').onclick=()=>npCmd('prev');
+$('npPlay').onclick=()=>{ if(npSource) npCmd('play'); else openApp('music'); };
+$('npNext').onclick=()=>npCmd('next'); $('npPrev').onclick=()=>npCmd('prev');
 $('mini').onclick=()=>{ if(npSource) showWv(npSource); };
-$('npArt').onclick=()=>{ if(npSource) showWv(npSource); };
+$('npArt').onclick=()=>{ if(npSource) showWv(npSource); else openApp('music'); };
+
+/* surus modu: pencere odakta degilse (oyun onde) kalabaligi gizle */
+function setDrive(){ document.body.classList.toggle('drive', !document.hasFocus()); }
+window.addEventListener('focus', setDrive); window.addEventListener('blur', setDrive); setDrive();
 
 $('wMin').onclick=()=>ipcRenderer.send('win','min');
 $('wClose').onclick=()=>ipcRenderer.send('win','close');
-updateNav();
-showMap();
+showHome();
 
 /* kamyon ekrani ayarlari -> Belgeler\Euro Truck Simulator 2\ets2_carplay.cfg (eklenti saniyede bir okur) */
-const DEF = { dim:55, w:85, fps:60, l:2, t:2, r:0, b:4 };
+const DEF = { dim:55, w:85, fps:60, l:2, t:2, r:2, b:3 };
 let cfg = Object.assign({}, DEF);
-try { const j = JSON.parse(load('cp_screen')||'null'); if (j) Object.assign(cfg, j); } catch(e){}
-if (!load('cp_fps60')) { cfg.fps = 60; store('cp_fps60','1'); } /* 3.0: 60 fps varsayilan */
-if (!load('cp_dim2')) { cfg.dim = Math.max(5, Math.round(cfg.dim * 0.55 / 5) * 5); store('cp_dim2','1'); } /* 3.1.4: mod artik %55 karartmiyor, ayni gorunum icin parlakligi cevir */
+let hadSaved = false;
+try { const j = JSON.parse(load('cp_screen')||'null'); if (j) { Object.assign(cfg, j); hadSaved = true; } } catch(e){}
+if (!load('cp_fps60')) { if (hadSaved) cfg.fps = 60; store('cp_fps60','1'); } /* 3.0: 60 fps varsayilan */
+/* 3.1.4: mod artik %55 karartmiyor; ayni gorunum icin KAYITLI parlakligi bir kez cevir.
+   Yeni kurulumda kayit yok, varsayilan (55) zaten yeni olcekte: cevirme. */
+if (!load('cp_dim2')) { if (hadSaved) cfg.dim = Math.max(5, Math.round(cfg.dim * 0.55 / 5) * 5); store('cp_dim2','1'); }
 const S = { dim:['sDim','vDim'], w:['sW','vW'], fps:['sF','vF'], l:['sL','vL'], t:['sT','vT'], r:['sR','vR'], b:['sB','vB'] };
 const unit = k => k==='fps' ? ' fps' : '%';
 function pushCfg(){ store('cp_screen', JSON.stringify(cfg)); ipcRenderer.send('screencfg', cfg); }
@@ -518,19 +526,19 @@ function preview(){ const i=$('scrImg'); i.style.left=cfg.l+'%'; i.style.top=cfg
 function syncUI(){ for (const k in S){ $(S[k][0]).value = cfg[k]; paint(k); } preview(); }
 for (const k in S) $(S[k][0]).addEventListener('input', e => { cfg[k] = parseInt(e.target.value,10); paint(k); preview(); pushCfg(); });
 $('sReset').onclick = () => { cfg = Object.assign({}, DEF); syncUI(); pushCfg(); };
-$('bSet').onclick = showSettings; $('tSet').onclick = showSettings;
+$('bSet').onclick = showSettings;
 
 /* guncelleme kontrolu (ayarlar) */
 let updCur = '';
 function updPaint(u){
-  const btn=$('updBtn'), info=$('updInfo'); btn.classList.remove('go'); btn.disabled=false;
+  const btn=$('updBtn'), info=$('updInfo'); btn.classList.remove('fill'); btn.disabled=false;
   const cur = updCur ? 'Sürüm '+updCur : '';
   switch(u.state){
     case 'checking': info.textContent='Kontrol ediliyor'; btn.disabled=true; break;
     case 'none': info.textContent=cur+', güncel'; btn.textContent='Güncellemeleri kontrol et'; break;
     case 'downloading': info.textContent=u.version+' indiriliyor'+(u.percent?' (%'+u.percent+')':''); btn.textContent='İndiriliyor'; btn.disabled=true; break;
-    case 'ready': info.textContent=u.version+' hazır, sen onaylayınca ya da uygulama kapanınca kurulur'; btn.textContent='Şimdi güncelle'; btn.classList.add('go'); break;
-    case 'error': info.textContent=cur+', güncelleme sunucusuna ulaşılamadı'; btn.textContent='Tekrar dene'; break;
+    case 'ready': info.textContent=u.version+' hazır. Şimdi ya da uygulama kapanınca kurulur.'; btn.textContent='Şimdi güncelle'; btn.classList.add('fill'); break;
+    case 'error': info.textContent=cur+'. Güncelleme sunucusuna ulaşılamadı.'; btn.textContent='Tekrar dene'; break;
     case 'dev': info.textContent='Geliştirme sürümü, güncelleme yok'; btn.disabled=true; break;
     default: info.textContent=cur; btn.textContent='Güncellemeleri kontrol et';
   }
@@ -554,12 +562,23 @@ ipcRenderer.on('update', (e, u) => {
 });
 $('updB').onclick = () => { $('updT').textContent = 'Güncelleniyor'; ipcRenderer.send('update-install'); };
 
-/* otomatik kurulum durumu */
-function setSt(id, r){ const el=$(id); if(!r) return; el.classList.toggle('ok', !!r.ok); el.classList.toggle('bad', !r.ok); el.querySelector('span').textContent=r.msg; }
+/* otomatik kurulum durumu: sorun yoksa haritada hicbir sey gorunmez */
+function shortSt(id, r){
+  if (r.ok) return r.msg;
+  const m = r.msg || '';
+  if (id==='stMod') return /bulunamad/.test(m) ? 'Mod dosyası eksik' : 'Mod kurulamadı';
+  if (id==='stKey') return /profil/.test(m) ? 'Oyun profili yok, oyunu bir kez aç' : /Oyun açık/.test(m) ? 'F8 için oyunu kapatıp yeniden aç' : /başka/.test(m) ? 'F8 başka bir işe atanmış' : 'F8 atanamadı, oyunda elle ata';
+  if (id==='stPlg') return /bulunamad/.test(m) ? 'ETS2 klasörü bulunamadı' : /oyunu kapat/.test(m) ? 'Eklenti için oyunu kapatıp yeniden aç' : 'Ekran eklentisi kurulamadı';
+  return m;
+}
+function setSt(id, r){ const el=$(id); if(!r) return; el.classList.toggle('ok', !!r.ok); el.classList.toggle('bad', !r.ok); el.querySelector('span').textContent=shortSt(id, r); el.title = r.msg || ''; }
+$('warn').onclick = showSettings;
 ipcRenderer.invoke('setup').then(r => {
-  if (!r || r.error) { setSt('stMod',{ok:false,msg:'Kurulum hatası: '+(r&&r.error)}); return; }
+  if (!r || r.error) { setSt('stMod',{ok:false,msg:'Kurulum hatası: '+(r&&r.error)}); $('warn').classList.add('show'); return; }
   setSt('stMod', r.mod); setSt('stKey', r.keys); setSt('stPlg', r.plugin);
-  $('status').classList.toggle('ready', !!(r.mod && r.mod.ok && r.keys && r.keys.ok && r.plugin && r.plugin.ok));
+  const bad = [r.mod, r.keys, r.plugin].filter(x => x && !x.ok).length;
+  $('warnT').textContent = bad === 1 ? 'Kurulumda 1 sorun var' : 'Kurulumda ' + bad + ' sorun var';
+  $('warn').classList.toggle('show', bad > 0);
   if (!r.plugin.ok && r.plugin.dir) { const el=$('stPlg'); el.classList.add('link'); el.title='Eklenti klasörünü aç'; el.onclick=()=>ipcRenderer.send('open-dir', r.plugin.dir); }
 });
 </script>

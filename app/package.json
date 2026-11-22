@@ -1,7 +1,7 @@
 {
   "name": "ets2-carplay",
   "productName": "ETS2 CarPlay",
-  "version": "3.1.5",
+  "version": "3.2.0",
   "description": "ETS2 Scania Smart Dash icin CarPlay tarzi ekran",
   "main": "main.js",
   "author": "servetsayarexe",
@@ -10,7 +10,7 @@
     "dist": "electron-builder --win nsis"
   },
   "devDependencies": {
-    "electron": "39.8.10",
+    "electron": "https://github.com/castlabs/electron-releases#v39.8.10+wvcus",
     "electron-builder": "^26.0.0"
   },
   "build": {
@@ -22,7 +22,8 @@
       "main.js",
       "setup.js",
       "index.html",
-      "assets/icon.png"
+      "assets/icon.png",
+      "assets/fonts/**"
     ],
     "extraResources": [
       {
@@ -65,5 +66,8 @@
   "dependencies": {
     "electron-updater": "^6.3.9"
   },
-  "repository": "https://github.com/ServetSayarExe/ets2-carplay"
+  "repository": "https://github.com/ServetSayarExe/ets2-carplay",
+  "allowScripts": {
+    "github:castlabs/electron-releases#62e98b31d8bbfbc70bdc971c6e24b0339e6826d3": true
+  }
 }

@@ -1,13 +1,16 @@
 # ETS2 CarPlay
 
-Euro Truck Simulator 2'deki Scania Smart Dash orta ekranına CarPlay tarzı bir arayüz getirir. YouTube, YouTube Music, Google, Kick, radyo ve istediğin her linki kamyonun ekranında açarsın. Oyunun kendi haritası da bir dokunuşla geri gelir.
+Euro Truck Simulator 2'deki Scania Smart Dash orta ekranına CarPlay tarzı bir arayüz getirir. YouTube, YouTube Music, Animecix, Google, Kick, radyo ve istediğin her linki kamyonun ekranında açarsın. Oyunun kendi haritası da bir dokunuşla geri gelir.
 
-## 3.0 ile gelenler
+## 3.2 ile gelenler
 
-- **60 fps:** kamyon ekranındaki görüntü saniyede 60 kareye çıktı, videolarda ses ile görüntü daha uyumlu (Ekran → Akıcılık).
-- **Daha yakın harita:** Smart Dash haritası yaklaşık 1,7 kat yakınlaştırıldı, hangi yoldan gidileceği daha net.
-- **Oyunla birlikte aç-kapa:** uygulama oyun açılınca kendiliğinden açılır, oyun kapanınca kendisi de kapanır.
-- **Otomatik güncelleme:** yeni sürümler arka planda iner, ana ekranda "Güncelle" düğmesi çıkar.
+- **Baştan tasarım:** ana ekran artık oyunun kendi haritası. Kontroller haritanın kenarlarında yüzer: arama sol üstte, uygulamalar sağda, çalan şarkı sol altta.
+- **Sürüş modu:** oyun öndeyken kamyon ekranında yalnızca harita, saat ve çalan şarkı kalır. Alt+Tab ile uygulamaya girince bütün kontroller geri gelir.
+- **PC penceresi pembe değil:** haritanın saydam alanı pencerede siyah görünür.
+- **Daha akıcı:** uygulama öndeyken ekran yakalama yavaşlar, menüler takılmaz; oyuna dönünce tam hıza çıkar. Bekleme süreleri yeniden yazıldı, 60 fps gerçekten 60.
+- **Video kenarları:** tam ekran videoda rastgele renkler giderildi, görüntü kenarları siyaha doğru yumuşar.
+- **Animecix** eklendi. Netflix ve Prime Video hazırlandı ama DRM imzası gelene kadar gizli.
+- Kurulum durumu ayarlarda, sorun varsa ana ekranda küçük bir uyarı çıkar. Varsayılan kenar boşlukları 2/2/2/3.
 
 ## Kurulum
 
@@ -20,10 +23,10 @@ Windows "bilgisayarınızı korudu" derse: **Ek bilgi → Yine de çalıştır**
 
 ## Kullanım
 
-- Sol raydaki düğmeler: ana menü, geri, ileri, yenile, harita ve uygulamalar.
-- **Harita** oyunun kendi navigasyonunu gösterir; çalan müzik köşede küçük kartla devam eder.
-- **Ekran** ayarlarında parlaklık, beyazları yumuşatma, akıcılık (fps) ve ekrana sığdırma var. Değişiklikler oyunda bir saniye içinde görünür.
-- Kısayollar: `Alt+←` geri, `Alt+→` ileri, `Alt+Home` ana menü, `Ctrl+L` adres çubuğu.
+- Sol raydaki düğmeler: harita (ana ekran), geri, ileri, yenile ve ayarlar. Tarayıcıdayken YouTube, Müzik ve Google da rayda durur.
+- **Ana ekran** oyunun kendi navigasyonudur; çalan müzik sol altta devam eder.
+- **CarPlay Ekranı** ayarlarında parlaklık, beyazları yumuşatma, akıcılık (fps) ve ekrana sığdırma var. Değişiklikler oyunda bir saniye içinde görünür.
+- Kısayollar: `Alt+←` geri, `Alt+→` ileri, `Alt+Home` harita, `Ctrl+L` adres çubuğu.
 
 Yeni sürüm çıkınca uygulama arka planda indirir, ana ekranda **Güncelle** düğmesi çıkar.
 
@@ -46,13 +49,13 @@ Eklentiyi derlemek (clang + lld):
 ```
 clang -target x86_64-pc-windows-msvc -O2 -ffreestanding -fno-builtin -fno-stack-protector -mno-stack-arg-probe -fshort-wchar -c ets2_carplay.c -o ets2_carplay.obj
 for d in kernel32 user32 gdi32 d3d11; do llvm-dlltool -m i386:x86-64 -d $d.def -l $d.lib; done
-lld-link /dll /noentry /nodefaultlib /machine:x64 /out:ets2_carplay.dll ets2_carplay.obj kernel32.lib user32.lib gdi32.lib d3d11.lib.lib
+lld-link /dll /noentry /nodefaultlib /machine:x64 /out:ets2_carplay.dll ets2_carplay.obj kernel32.lib user32.lib gdi32.lib d3d11.lib
 ```
 
-Derlenmiş DLL ve paketlenmiş mod `app/assets/` içinde durur; kurulum dosyası bunları içerir.
+Derlenmiş DLL ve paketlenmiş mod `app/assets/` içinde durur; kurulum dosyası bunları içerir. Eklenti ya da mod değişince ikisini de yeniden üretip `app/assets/` içine koy: GitHub Actions yalnızca Electron uygulamasını derler.
 
 ## Yeni sürüm çıkarmak
 
-`app/package.json` içindeki `version`'ı artır, ardından `v2.5.1` gibi bir etiket gönder. GitHub Actions kurulum dosyasını derleyip sürüme koyar, kullanıcıların uygulaması kendini günceller.
+`app/package.json` içindeki `version`'ı (ve `mod/manifest.sii` içindeki `package_version`'ı) artır, ardından Actions sekmesinden **Sürüm derle ve yayınla** iş akışını çalıştır. Etiketi kendisi oluşturur. Etiketi elle göndereceksen `package.json` ile aynı sürümde olmalı (ör. `v3.1.6`), yoksa iş akışı durur. Kurulum dosyası derlenip sürüme konur, kullanıcıların uygulaması kendini günceller.
 
 Yapan: [@servetsayarexe](https://instagram.com/servetsayarexe)
