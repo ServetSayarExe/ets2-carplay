@@ -9,7 +9,7 @@ Euro Truck Simulator 2'deki Scania Smart Dash orta ekranına CarPlay tarzı bir 
 - **PC penceresi pembe değil:** haritanın saydam alanı pencerede siyah görünür.
 - **Daha akıcı:** uygulama öndeyken ekran yakalama yavaşlar, menüler takılmaz; oyuna dönünce tam hıza çıkar. Bekleme süreleri yeniden yazıldı, 60 fps gerçekten 60.
 - **Video kenarları:** tam ekran videoda rastgele renkler giderildi, görüntü kenarları siyaha doğru yumuşar.
-- **Animecix** eklendi. Netflix ve Prime Video hazırlandı ama DRM imzası gelene kadar gizli.
+- **Animecix** eklendi.
 - Kurulum durumu ayarlarda, sorun varsa ana ekranda küçük bir uyarı çıkar. Varsayılan kenar boşlukları 2/2/2/3.
 
 ## Kurulum
